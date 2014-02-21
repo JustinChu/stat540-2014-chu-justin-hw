@@ -27,27 +27,51 @@ Each student must submit their own work: no group efforts. It's fine to talk to 
 
 Load the data. Smell test it. Fiddle with factor levels and do any other light cleaning you deem necessary. You can set `include = FALSE` for some/all of this code, but DO IT.
 
+Start by loading data/libraries:
+```{r}
+library(ggplot2)
+library(lattice)
+library(plyr)
+library(car)
+prDat <- read.table("GSE7191-data.txt")
+prDes <- read.table("GSE7191-design.txt", header = TRUE)
+```
 
+Check that intake make sense (some hidden, see raw Rmd for more)
+```{r include = FALSE}
+str(prDat)
+head(prDat)
+tail(prDat)
+```
+```{r}
+str(prDat, max.level = 0)
 
+str(prDes)
+head(prDes)
+tail(prDes)
+```
 
+Fix date and genotype for prDes:
+```{r}
+prDes$DateRun <- as.Date(prDes$DateRun, format="%m/%d/%y" )
+prDes$Genotype <- recode(prDes$Genotype, "'Wild_type'='wt'; 'S1P2_KO'='S1P2KO'", as.factor.result = FALSE)
 
-
-
-
-
-
-
-
-
-
-
+str(prDes)
+```
 
 ### Q1 **(2 points)** What are the basic characteristics of the data and meta-data? 
 
 #### Q1a: How many probes? How many samples?
 
+Number of probes:
+```{r}
+ncol(prDat)
+```
 
-
+Number of samples:
+```{r}
+nrow(prDes)
+```
 
 #### Q1b: What is the breakdown of samples for Genotype, BrainRegion, Sex, and DateRun?
 
