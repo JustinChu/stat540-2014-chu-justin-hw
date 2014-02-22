@@ -54,7 +54,7 @@ tail(prDes)
 Fix date and genotype for prDes:
 ```{r}
 prDes$DateRun <- as.Date(prDes$DateRun, format="%m/%d/%y" )
-prDes$Genotype <- recode(prDes$Genotype, "'Wild_type'='wt'; 'S1P2_KO'='S1P2KO'", as.factor.result = FALSE)
+prDes$Genotype <- recode(prDes$Genotype, "'Wild_type'='wt'; 'S1P2_KO'='S1P2KO'; 'S1P3_KO'='S1P3KO'", as.factor.result = FALSE)
 
 str(prDes)
 ```
@@ -65,7 +65,7 @@ str(prDes)
 
 Number of probes:
 ```{r}
-ncol(prDat)
+nrow(prDat)
 ```
 
 Number of samples:
@@ -77,14 +77,48 @@ nrow(prDes)
 
 For starters, cross-tabulate Genotype and BrainRegion. Then do some cross-tabulation involving DateRun and, optionally, Sex to investigate if these "nuisance" factors are confounded with the experimental factors. Make sure you've included counts for all 4 individual factors somewhere, even if it's just in the margins of a cross-tabulation. How do you feel about the experimental design? Hint: `table()` and `addmargins()` will help.
 
+```{r}
+table(prDes$Genotype, prDes$BrainRegion)
+```
+Seems fairly balanced for each tissue type. If comparing genotypes wt, S1P2KO and S1P3KO, the latter is lacking in samples for each tissue type compared to the others. It is nice to see that wt and S1P2KO are at least balanced.
+
+```{r}
+table(prDes$DateRun, prDes$Genotype)
+```
+Most of the wt controls were obtained earlier in addition to in consistancies of when each genotype as collected each day. These differences could confount the results. Optimally each date at would have the same number of collected samples.
 
 
+```{r}
+table(prDes$DateRun, prDes$BrainRegion)
+```
+More balanced than genetype collection consitance. There seems to be more sample collect near the latter dates that could affect the results.
+
+```{r}
+table(prDes$Genotype, prDes$Sex)
+```
+Only slightly more females but this may not be a big issue as the others.
+
+```{r}
+table(prDes$DateRun, prDes$Sex)
+```
+Again like genotype collection this is all over the place in term of when each was collected.
+
+For good measure here is a cross tabulation with all the counts for all combinations of 4 variables. It may be useful latter to rationalize observations.
+```{r}
+table(prDes$Genotype, prDes$DateRun, prDes$Sex, prDes$BrainRegion)
+```
+
+*Overall Conclusion about Experimental Design:* It is not optimal but few situations/experiments really are. So long as if what day samples are collected is not a huge deal, the experiment should still be valid.
 
 #### Q1c: Create a plot showing the gene expression data for one probe.
 
 Use position, panels or facets, and color to convey the Genotype, BrainRegion, and Sex of the samples.
 
+Start by picking a probe at random:
+```{r}
 
+
+```
 
 
 #### Q1d: Report the average expression of the selected probe for all possible combinations of Genotype, BrainRegion and Sex.
