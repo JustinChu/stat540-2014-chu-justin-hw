@@ -14,13 +14,6 @@ The assignment has 25 points and represents 25% of your overall course mark. Ove
 
 Each student must submit their own work: no group efforts. It's fine to talk to fellow students and have discussion on the Google Group. If someone is really helpful, give them some credit. You have definitely crossed the line if there's any copying and pasting of code or wording. 
 
-## How to submit the work
-
-*to be written ... write it in R markdown, compile to markdown and HTML, put all that in private repo on Github, share links with TA*
-
-
-
-
 ## Your mission
 
 ### Q0 **(0 pts)** Intake
@@ -32,8 +25,12 @@ Start by loading data/libraries:
 library(ggplot2)
 library(lattice)
 library(plyr)
-library(car)
-prDat <- read.table("GSE7191-data.txt")
+library(knitr)
+library(gplots)
+library(RColorBrewer)
+library(hexbin)
+library(preprocessCore)
+prDat <- read.table("GSE7191-data.txt", row.names = 1, header = TRUE)
 prDes <- read.table("GSE7191-design.txt", header = TRUE)
 ```
 
@@ -51,11 +48,11 @@ head(prDes)
 tail(prDes)
 ```
 
-Fix date and genotype for prDes:
+Fix date and make genotype a factor for prDes, also make sample names a column:
 ```{r}
-prDes$DateRun <- as.Date(prDes$DateRun, format="%m/%d/%y" )
-prDes$Genotype <- recode(prDes$Genotype, "'Wild_type'='wt'; 'S1P2_KO'='S1P2KO'; 'S1P3_KO'='S1P3KO'", as.factor.result = FALSE)
-
+prDes$sampleID <- rownames(prDes)
+prDes$DateRun <- as.factor(as.Date(prDes$DateRun, format="%m/%d/%y" ))
+prDes$Genotype <- as.factor(prDes$Genotype)
 str(prDes)
 ```
 
@@ -80,18 +77,18 @@ For starters, cross-tabulate Genotype and BrainRegion. Then do some cross-tabula
 ```{r}
 table(prDes$Genotype, prDes$BrainRegion)
 ```
-Seems fairly balanced for each tissue type. If comparing genotypes wt, S1P2KO and S1P3KO, the latter is lacking in samples for each tissue type compared to the others. It is nice to see that wt and S1P2KO are at least balanced.
+Seems fairly balanced for each tissue type. If comparing genotypes Wild_type, S1P2_KO and S1P3_KO, the latter is lacking in samples for each tissue type compared to the others. It is nice to see that Wild_type and S1P2_KO are at least balanced.
 
 ```{r}
 table(prDes$DateRun, prDes$Genotype)
 ```
-Most of the wt controls were obtained earlier in addition to in consistancies of when each genotype as collected each day. These differences could confount the results. Optimally each date at would have the same number of collected samples.
+Most of the Wild_type controls were obtained earlier in addition to in consistancies of when each genotype as collected each day. These differences could confount the results. Optimally each date at would have the same number of collected samples.
 
 
 ```{r}
 table(prDes$DateRun, prDes$BrainRegion)
 ```
-More balanced than genetype collection consitance. There seems to be more sample collect near the latter dates that could affect the results.
+More balanced than genetype collection consistancy. There seems to be more samples collected near the later dates that could affect the results.
 
 ```{r}
 table(prDes$Genotype, prDes$Sex)
@@ -114,17 +111,42 @@ table(prDes$Genotype, prDes$DateRun, prDes$Sex, prDes$BrainRegion)
 
 Use position, panels or facets, and color to convey the Genotype, BrainRegion, and Sex of the samples.
 
-Start by picking a probe at random:
+function for processing data:
 ```{r}
-
+prepareData <- function(x, dat, des){
+  miniDat <- subset(dat, rownames(dat) %in% x)
+  miniDat <- data.frame(gExp = as.vector(t(as.matrix(miniDat))), gene = factor(rep(rownames(miniDat), each = ncol(miniDat)), levels = x))
+  miniDat <- suppressWarnings(data.frame(des, miniDat))
+  return(miniDat)
+}
 
 ```
 
+Start by picking a probe at random:
+```{r}
+set.seed(540)
+genes1 <- row.names(prDat)[sample(1:nrow(prDat), 1)]
+sDat <- prepareData(genes1, prDat, prDes)
+```
+
+Plot genotype vs gExp, facetted by BrainRegion and points are coloured by sex:
+```{r}
+ggplot(sDat, aes(Genotype, gExp)) + geom_violin() + facet_grid(. ~ BrainRegion) + geom_point(aes(colour = Sex), position = "jitter") 
+```
+
+For fun and to see if date collected does anything interesting, plot with DateRun (date as a continous variable and with genotype as the colour and Sex as symbol shape):
+```{r}
+ggplot(sDat, aes(x=DateRun, y=gExp)) + facet_grid(. ~ BrainRegion) + geom_point(aes(shape = Sex, colour = Genotype)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Can't really tell, similar genotypes tended to be colled on the same date.
 
 #### Q1d: Report the average expression of the selected probe for all possible combinations of Genotype, BrainRegion and Sex.
 
-
-
+```{r results ='asis'}
+sDatMean <- ddply(sDat, ~ Genotype + BrainRegion + Sex, summarize, mean = mean(gExp))
+kable(sDatMean, format = "markdown")
+```
 
 ### Q2 **(4 points)** Examine the sample correlation matrix.
 
@@ -132,22 +154,136 @@ Start by picking a probe at random:
 
 At the very least, order the samples by run date; within run date, you could also sort on other factors. What do you see about batch effects, outliers, etc.? Hint: `cor()` and `heatmap()` are helpful.
 
+Initial rendering of heatmap (no sorting, leaving dendrogram intact):
+```{r}
+#run correlation
+corDat <- cor(prDat)
 
+#gray scale for heatmap
+jGnBuFun <- colorRampPalette(brewer.pal(n = 9, "GnBu"))
 
+#functions assigning colours to variables
+colorMapGenotype <- function(x) { 
+  if (x=="S1P3_KO")
+    "red"
+  else if(x=="S1P2_KO")
+    "green"
+  else if(x=="Wild_type")
+    "gray"
+}
+
+colorMapBrainRegion <- function(x) { 
+  if (x=="hippocampus")
+    "blue"
+  else
+    "yellow"
+}
+
+cCol <- unlist(lapply(prDes$Genotype, colorMapGenotype))
+rCol <- unlist(lapply(prDes$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDat, col = jGnBuFun, trace = "none", ColSideColors=cCol, RowSideColors=rCol)
+```
+The colours on the side column are the genotype or tissue type. Wild_type is grey, red is S1P3_KO and green is S1P2_KO.
+hippocampus is blue and neocortex is yellow.
+
+Already a clear outlier exists (sample GSM172976). Since we seem to have 2 distint groups, that could mean GSM172955, GSM172968 and GSM172954 may also be outliers in there own way, but it seems interesting that they group together. It is also clear that these samples don't really group that much by genotype
+
+Check out any date collection effects may have occured by sorting by DateRun:
+```{r}
+ordPrDes <- prDes[order(prDes$DateRun),]
+cCol <- unlist(lapply(ordPrDes$Genotype, colorMapGenotype))
+rCol <- unlist(lapply(ordPrDes$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun, ColSideColors=cCol, RowSideColors=rCol)
+```
+
+No trend on date collected does anything to the data. The block correlation we see are likely are due to the tendency to collect equal amounts of tissue on tissue on the same days.
+
+To confirm this lets sort by BrainRegion and then date:
+```{r}
+ordPrDes <- prDes[order(prDes$BrainRegion, prDes$DateRun),]
+cCol <- unlist(lapply(ordPrDes$Genotype, colorMapGenotype))
+rCol <- unlist(lapply(ordPrDes$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun, ColSideColors=cCol, RowSideColors=rCol)
+```
+Corrlation is strong within the same tissue type.
+
+The triplet from earlier still bugs me. Perhaps showing discritly the dates on which samples were collected could illucidate this.
+```{r}
+#for generating categorical values for colouring
+selcol <- colorRampPalette(brewer.pal(9,"Set1"))
+dateCol <- selcol(length(unique(ordPrDes$DateRun)));
+
+ordPrDes <- prDes[order(prDes$BrainRegion,prDes$DateRun, prDes$Genotype),]
+cCol <- unlist(lapply(ordPrDes$Genotype, colorMapGenotype))
+heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun, ColSideColors=cCol, RowSideColors=dateCol[ordPrDes$DateRun])
+```
+The colours on the y axis are supposed to be discrete enough for you to see if certain samples were collected on the same date.
+
+We now can see GSM172968 and GSM172954 may be similar due to a batch effect on date run, and they should be similar as they both have the same genotype but it does not explain why GSM172968 groups with them as it occured on a distinctly different date and genotype.
+
+For good measure to investigate effects of sex sort by Sex.
+```{r}
+ordPrDes <- prDes[order(prDes$Sex, ordPrDes$DateRun),]
+cCol <- unlist(lapply(ordPrDes$Genotype, colorMapGenotype))
+rCol <- unlist(lapply(ordPrDes$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun, ColSideColors=cCol, RowSideColors=rCol)
+```
+If gender has any effect we should see it splitting the matrix like we do with brain region. Again, brain region is the most important.
 
 #### Q2b: Identify the outlier sample.
 
 Try to go beyond merely "eyeballing" it, i.e. make a quantitative statement about how it "sticks out" from the other samples.
 
+First off I'd like to note that my background in statistics is a bit weak, but I'm pretty sure outlier detection is disputed as being quite subjective and ultimately dependant on nature the data.
 
+At any rate I'm going to use a method I obtained from this [study](http://geschwindlab.neurology.ucla.edu/protocols/rtutorial2). Basically they use inter-array correlation (IAC), which was defined as the Pearson correlation coefficient of the expression levels. In the paper the use evidence from a dendrogram (like we generated for the heatmap) and mean IAC within sample. I'm going to be honest, I don't really understand it that well but apparently low mean IAC in a sample indicate that it is a likely outlier. If I were to take a stab at explaining it, I would say that this is taking the correlations and generating a distribution from them. Any mean IAC in samples outside of a reasonable threshold like several standard devations from the mean on the whole distribution are likely outliers. Although this is a quanitative metric the threshold to pick seems quiet subjective to me, but I don't really know a better way of doing it.
 
+At any rate I am going to replicate their methods on our data using the meanIAC and threshold cut off of 2 sd as a likely outlier:
+```{r}
+# Calculating IACs for all pairs of samples
+IAC <- cor(prDat,use="p")
+
+#calculate the mean IAC for each array
+meanIAC <- apply(IAC,2,mean)
+sdCorr <- sd(meanIAC)
+numbersd <- (meanIAC-mean(meanIAC))/sdCorr
+numbersdDat <- data.frame(numbersd)
+head(numbersdDat)
+```
+
+Okay now that we have constructed that do any of them have a low mean IAC (less than -2 sd)?
+```{r}
+row.names(numbersdDat)[numbersdDat$numbersd <= -2]
+```
+
+Only GSM172976 seem to be found to be an outlier with this method.
+
+What does the actual distribution look like?
+```{r}
+numbersdDat$sample <- row.names(numbersdDat)
+numSDDatDes <- data.frame(prDes, numbersdDat)
+ggplot(numSDDatDes, aes(sample, numbersd)) + geom_point(aes(shape = BrainRegion, colour = Genotype)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+There it is again, near the bottom more than 6 sd from the mean; with this method it really seems to stick out of the data.
 
 #### Q2c: Examine the outlier in the context of its experimental group.
 
 Which group is the outlier in, in terms of Genotype, BrainRegion, and Sex? Scatter plot these samples against each other and comment on the plot. Try to address overplotting! Hint: `splom()` from `lattice` is helpful.
 
+Which group is the outlier in, in terms of Genotype, BrainRegion, and Sex?
+```{r}
+group <- prDes[prDes$sampleID == "GSM172976",]
+group
+```
 
-
+Scatter plot these samples against each other and comment on the plot.
+```{r}
+#extract the other samples with same group
+sampIndexes <- ((prDes$Genotype == group$Genotype) & (prDes$BrainRegion == group$BrainRegion ) & (prDes$Sex == group$Sex))
+splom(prDat[,sampIndexes], panel=panel.hexbinplot)
+```
+I tried to address overplotting by using hexbins. It looks like GSM172975 and GSM172974 have a tighter (skinnier) groupings of data points at diagonal points indicating that they are indeed similar in gene expresion for the probes. Any plots with GSM172976 seem to have more spread from the diagonal line indicating that it is not as similar as the other two in gene expresion for the probes.
 
 ### Q3 **(4 points)** Normalization, what it can and can't do.
 
@@ -156,38 +292,80 @@ Which group is the outlier in, in terms of Genotype, BrainRegion, and Sex? Scatt
 Make a pair of plots: each plot will show gene expression boxplots, one per sample. Identify the outlier sample with a different color, if you can. Comment on these plots, in general and with respect to the outlier.
 
 Here are the 2 plots:
-
   * The data as provided
   * The data after you apply quantile normalization.
 
-Hint: `normalize.quantiles()` in the Bioconductor package `preprocessCore` is helpful. So are `graphics::boxplot()`, `lattice::bwplot()` and `ggplot2::geom_boxplot()`.
+First gene expression boxplots no normalization:
+```{r}
+#extract the other samples with same group
+prDesDat <- prepareData(row.names(prDat), prDat, prDes)
+prDesDat$outlier <- FALSE
+prDesDat$outlier[prDesDat$sampleID == "GSM172976"] <- TRUE
+ggplot(prDesDat, aes(sampleID, gExp, colour = outlier)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+When I first saw the plot I questioned if I did anything wrong. However, it make sense that it is indeed possible for the outlier to not look that different. Gene expression for many probes is what is making it an outlier. That means is not necessary the overall expression of all the probes that is the issue.
 
+After normalization:
+```{r}
+#normalize
+prDatNorm <- data.frame(normalize.quantiles(as.matrix(prDat)))
+rownames(prDatNorm) <- rownames(prDat)
+colnames(prDatNorm) <- colnames(prDat)
 
-
+#extract the other samples with same group
+prDesDatNorm <- prepareData(row.names(prDat), prDatNorm, prDes)
+prDesDatNorm$outlier <- FALSE
+prDesDatNorm$outlier[prDesDat$sampleID == "GSM172976"] <- TRUE
+ggplot(prDesDatNorm, aes(sampleID, gExp, colour = outlier)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+Well now the data doesn't seem to be as shaky, but I doubt that fixes the problem based on what I mentioned above this.
 
 #### Q3b: Did normalization fix the outlier?
 
 With the quantile-normalized data, re-make the heatmap of the sample correlation matrix and re-compare the outlier to its experimental group. Is everything OK now?
 
-
-
+```{r}
+#run correlation
+corDatNorm <- cor(prDatNorm)
+cColNorm <- unlist(lapply(prDes$Genotype, colorMapGenotype))
+rColNorm <- unlist(lapply(prDes$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDatNorm, col = jGnBuFun, trace = "none", ColSideColors=cColNorm, RowSideColors=rColNorm)
+```
+The outlier is not gone as expected. Gene expression values are not at incorrect levels, they are simply not agreeing the other samples in terms of what genes are being expressed. It is almost as if the outlier was not the correct tissue type or something.
 
 #### Q3c: Form a dataset that omits the outlier and quantile normalize it.
 
-
-
+Removal of GSM172976 from set:
+```{r}
+prDatnoOut <- prDat
+prDatnoOut$GSM172976 <- NULL
+prDesNoOut <- subset(prDes, sampleID != "GSM172976")
+prDatnoOutNorm <- data.frame(normalize.quantiles(as.matrix(prDatnoOut)))
+rownames(prDatnoOutNorm) <- rownames(prDatnoOut)
+colnames(prDatnoOutNorm) <- colnames(prDatnoOut)
+```
 
 #### Q3d Re-make the heatmap of the sample correlation matrix, now that the worst outlier is gone. Interpret what you see.
-
-
-
+```{r}
+corDatnoOutNorm <- cor(prDatnoOut)
+cColnoOutNorm <- unlist(lapply(prDesNoOut$Genotype, colorMapGenotype))
+rColnoOutNorm <- unlist(lapply(prDesNoOut$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDatnoOutNorm, col = jGnBuFun, trace = "none", ColSideColors=cColnoOutNorm, RowSideColors=rColnoOutNorm)
+```
+With the outlier gone it is easier to see contrast within the heatmap. The tissue separation is more prominant and you can see some of the sub clades grouping. There may still be an issue with the 3 samples on the left but you can actually see that they seem to actually correlate more to the brain region they are associated with most.
 
 #### Q3e: Remake the expression boxplots for all samples before moving on to differential expression analysis.
 
 How many samples remain? 
+```{r}
+ncol(prDatnoOutNorm)
+```
 
-
-
+Plotting again:
+```{r}
+prDesDatNoOutNorm <- prepareData(row.names(prDat), prDatnoOutNorm, subset(prDes, sampleID != "GSM172976"))
+ggplot(prDesDatNoOutNorm, aes(sampleID, gExp)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
 
 ### Q4 **(5 points)** For each probe, test if it has differential expression across the three genotypes *within the neocortex brain region only*.
 
@@ -196,7 +374,6 @@ You should be using data with the worst outlier removed, after quantile normaliz
 #### Q4a: Write out, in an equation or English or, ideally, both, the model you are fitting.
 
 In the context of that model, what statistical test(s) are you conducting? (You can gloss over the neocortex restriction here.)
-
 
 
 
