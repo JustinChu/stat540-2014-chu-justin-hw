@@ -8,17 +8,9 @@ The motivation is to study a gene [S1P2, sphingosine-1-phosphate receptor 2](htt
 
 You can find two data files for this study [here](../examples/mouseBrain/), specifically the [expression data](../examples/mouseBrain/data/GSE7191-data.txt) and the [design](../examples/mouseBrain/data/GSE7191-design.txt) of the experiment. The data have been re-preprocessed with RMA from the Bioconductor `affy` package, so it is on a log2 scale. Some probes that are considered "controls" were also removed, so overall it's a little different than the processed data provided via GEO. Our focus here is on quality control, exploration, and differential expression analysis.
 
-## Evaluation
-
-The assignment has 25 points and represents 25% of your overall course mark. Overall presentation and mechanics is worth 5 points, with full points awarded if it's exceptional. The remaining 20 points are spread among the specific questions, as detailed below. We will try to give partial credit when/if we can figure out what you're trying to do.
-
-Each student must submit their own work: no group efforts. It's fine to talk to fellow students and have discussion on the Google Group. If someone is really helpful, give them some credit. You have definitely crossed the line if there's any copying and pasting of code or wording. 
-
 ## Your mission
 
 ### Q0 **(0 pts)** Intake
-
-Load the data. Smell test it. Fiddle with factor levels and do any other light cleaning you deem necessary. You can set `include = FALSE` for some/all of this code, but DO IT.
 
 Start by loading data/libraries:
 ```{r}
@@ -30,6 +22,7 @@ library(gplots)
 library(RColorBrewer)
 library(hexbin)
 library(preprocessCore)
+library(limma)
 prDat <- read.table("GSE7191-data.txt", row.names = 1, header = TRUE)
 prDes <- read.table("GSE7191-design.txt", header = TRUE)
 ```
@@ -72,8 +65,6 @@ nrow(prDes)
 
 #### Q1b: What is the breakdown of samples for Genotype, BrainRegion, Sex, and DateRun?
 
-For starters, cross-tabulate Genotype and BrainRegion. Then do some cross-tabulation involving DateRun and, optionally, Sex to investigate if these "nuisance" factors are confounded with the experimental factors. Make sure you've included counts for all 4 individual factors somewhere, even if it's just in the margins of a cross-tabulation. How do you feel about the experimental design? Hint: `table()` and `addmargins()` will help.
-
 ```{r}
 table(prDes$Genotype, prDes$BrainRegion)
 ```
@@ -83,7 +74,6 @@ Seems fairly balanced for each tissue type. If comparing genotypes Wild_type, S1
 table(prDes$DateRun, prDes$Genotype)
 ```
 Most of the Wild_type controls were obtained earlier in addition to in consistancies of when each genotype as collected each day. These differences could confount the results. Optimally each date at would have the same number of collected samples.
-
 
 ```{r}
 table(prDes$DateRun, prDes$BrainRegion)
@@ -108,8 +98,6 @@ table(prDes$Genotype, prDes$DateRun, prDes$Sex, prDes$BrainRegion)
 *Overall Conclusion about Experimental Design:* It is not optimal but few situations/experiments really are. So long as if what day samples are collected is not a huge deal, the experiment should still be valid.
 
 #### Q1c: Create a plot showing the gene expression data for one probe.
-
-Use position, panels or facets, and color to convey the Genotype, BrainRegion, and Sex of the samples.
 
 function for processing data:
 ```{r}
@@ -151,8 +139,6 @@ kable(sDatMean, format = "markdown")
 ### Q2 **(4 points)** Examine the sample correlation matrix.
 
 #### Q2a: Depict the sample-to-sample correlations in a heatmap.
-
-At the very least, order the samples by run date; within run date, you could also sort on other factors. What do you see about batch effects, outliers, etc.? Hint: `cor()` and `heatmap()` are helpful.
 
 Initial rendering of heatmap (no sorting, leaving dendrogram intact):
 ```{r}
@@ -217,7 +203,7 @@ ordPrDes <- prDes[order(prDes$BrainRegion,prDes$DateRun, prDes$Genotype),]
 cCol <- unlist(lapply(ordPrDes$Genotype, colorMapGenotype))
 heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun, ColSideColors=cCol, RowSideColors=dateCol[ordPrDes$DateRun])
 ```
-The colours on the y axis are supposed to be discrete enough for you to see if certain samples were collected on the same date.
+The colours on the y axis the dates. They are supposed to be discrete enough for you to see if certain samples were collected on the same date.
 
 We now can see GSM172968 and GSM172954 may be similar due to a batch effect on date run, and they should be similar as they both have the same genotype but it does not explain why GSM172968 groups with them as it occured on a distinctly different date and genotype.
 
@@ -230,13 +216,9 @@ heatmap.2(corDat[rownames(ordPrDes), rownames(ordPrDes)], trace = "none", dendro
 ```
 If gender has any effect we should see it splitting the matrix like we do with brain region. Again, brain region is the most important.
 
-#### Q2b: Identify the outlier sample.
+#### Q2b: Identify the outlier sample. Make a quantitative statement about how it "sticks out".
 
-Try to go beyond merely "eyeballing" it, i.e. make a quantitative statement about how it "sticks out" from the other samples.
-
-First off I'd like to note that my background in statistics is a bit weak, but I'm pretty sure outlier detection is disputed as being quite subjective and ultimately dependant on nature the data.
-
-At any rate I'm going to use a method I obtained from this [study](http://geschwindlab.neurology.ucla.edu/protocols/rtutorial2). Basically they use inter-array correlation (IAC), which was defined as the Pearson correlation coefficient of the expression levels. In the paper the use evidence from a dendrogram (like we generated for the heatmap) and mean IAC within sample. I'm going to be honest, I don't really understand it that well but apparently low mean IAC in a sample indicate that it is a likely outlier. If I were to take a stab at explaining it, I would say that this is taking the correlations and generating a distribution from them. Any mean IAC in samples outside of a reasonable threshold like several standard devations from the mean on the whole distribution are likely outliers. Although this is a quanitative metric the threshold to pick seems quiet subjective to me, but I don't really know a better way of doing it.
+I'm going to use a method I obtained from this [study](http://geschwindlab.neurology.ucla.edu/protocols/rtutorial2). Basically they use inter-array correlation (IAC), which was defined as the Pearson correlation coefficient of the expression levels. In the paper the use evidence from a dendrogram (like we generated for the heatmap) and mean IAC within sample. I'm going to be honest, I don't really understand it that well but apparently low mean IAC in a sample indicate that it is a likely outlier. If I were to take a stab at explaining it, I would say that this is taking the correlations and generating a distribution from them. Any mean IAC in samples outside of a reasonable threshold like several standard devations from the mean on the whole distribution are likely outliers. Although this is a quanitative metric the threshold to pick seems quiet subjective to me, but I don't really know a better way of doing it.
 
 At any rate I am going to replicate their methods on our data using the meanIAC and threshold cut off of 2 sd as a likely outlier:
 ```{r}
@@ -269,15 +251,13 @@ There it is again, near the bottom more than 6 sd from the mean; with this metho
 
 #### Q2c: Examine the outlier in the context of its experimental group.
 
-Which group is the outlier in, in terms of Genotype, BrainRegion, and Sex? Scatter plot these samples against each other and comment on the plot. Try to address overplotting! Hint: `splom()` from `lattice` is helpful.
-
 Which group is the outlier in, in terms of Genotype, BrainRegion, and Sex?
 ```{r}
 group <- prDes[prDes$sampleID == "GSM172976",]
 group
 ```
 
-Scatter plot these samples against each other and comment on the plot.
+Scatter plot these samples against each other and comment on the plot:
 ```{r}
 #extract the other samples with same group
 sampIndexes <- ((prDes$Genotype == group$Genotype) & (prDes$BrainRegion == group$BrainRegion ) & (prDes$Sex == group$Sex))
@@ -288,8 +268,6 @@ I tried to address overplotting by using hexbins. It looks like GSM172975 and GS
 ### Q3 **(4 points)** Normalization, what it can and can't do.
 
 #### Q3a: Make boxplots.
-
-Make a pair of plots: each plot will show gene expression boxplots, one per sample. Identify the outlier sample with a different color, if you can. Comment on these plots, in general and with respect to the outlier.
 
 Here are the 2 plots:
   * The data as provided
@@ -370,21 +348,36 @@ ggplot(prDesDatNoOutNorm, aes(sampleID, gExp)) + geom_boxplot() + theme(axis.tex
 ### Q4 **(5 points)** For each probe, test if it has differential expression across the three genotypes *within the neocortex brain region only*.
 
 You should be using data with the worst outlier removed, after quantile normalization and, for this question, restricted to neocortex.
+```{r}
+#set up
+prDesNoOut <- subset(prDes, sampleID != "GSM172976")
+neoCPrDes <- subset(prDesNoOut, BrainRegion == "neocortex")
+neoCPrDat <- subset(prDesDatNoOutNorm, BrainRegion == "neocortex")
+```
 
 #### Q4a: Write out, in an equation or English or, ideally, both, the model you are fitting.
 
 In the context of that model, what statistical test(s) are you conducting? (You can gloss over the neocortex restriction here.)
 
+I guess the main question we are trying to solve with this question is: Do we think the expression levels at different genetypes are generated by distributions with different locations or a common one?
 
+```{r}
+#set up
+neoCPrDesMat <- model.matrix(~Genotype, prDesNeoC)
+str(neoCPrDesMat)
 
-
-
+neoCFit <- lmFit(neoC_prDat, neoC_prDes)
+neoCFitEB <- eBayes(neoCFit)
+topTable(neoCFitEB)
+```
 
 #### Q4b: Explore your hits.
 
 Display the expression data for the top 50 probes in a heat map. Order the probes by p-value; order the samples by genotype.
 
+```{r}
 
+```
 
 
 #### Q4c: Count your hits.
