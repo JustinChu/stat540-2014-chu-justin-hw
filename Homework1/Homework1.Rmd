@@ -499,7 +499,7 @@ geneTopHits <- head(geneTTbl, n = 4)
 geneTopDat <- prepareData(row.names(geneTopHits), gseDatNoOutNorm, gseDesNoOut)
 ggplot(geneTopDat, aes(Genotype, gExp)) + geom_violin() + geom_point(aes(colour = BrainRegion), position = "jitter") + facet_wrap(~ gene) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
-Brain tissue dominates the plot, we se a larger spread than we did with the top hits of brain region.
+We see good examples of genotype clearly mattering.
 
 ```{r}
 #find boring hits:

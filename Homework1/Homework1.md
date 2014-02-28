@@ -625,23 +625,23 @@ The outlier is not gone as expected. Gene expression values are not at incorrect
 Removal of GSM172976 from set:
 
 ```r
-gseDatnoOut <- gseDat
-gseDatnoOut$GSM172976 <- NULL
+gseDatNoOut <- gseDat
+gseDatNoOut$GSM172976 <- NULL
 gseDesNoOut <- subset(gseDes, sampleID != "GSM172976")
-gseDatnoOutNorm <- data.frame(normalize.quantiles(as.matrix(gseDatnoOut)))
-rownames(gseDatnoOutNorm) <- rownames(gseDatnoOut)
-colnames(gseDatnoOutNorm) <- colnames(gseDatnoOut)
+gseDatNoOutNorm <- data.frame(normalize.quantiles(as.matrix(gseDatNoOut)))
+rownames(gseDatNoOutNorm) <- rownames(gseDatNoOut)
+colnames(gseDatNoOutNorm) <- colnames(gseDatNoOut)
 ```
 
 
 #### Q3d Re-make the heatmap of the sample correlation matrix, now that the worst outlier is gone. Interpret what you see.
 
 ```r
-corDatnoOutNorm <- cor(gseDatnoOut)
-cColnoOutNorm <- unlist(lapply(gseDesNoOut$Genotype, colorMapGenotype))
-rColnoOutNorm <- unlist(lapply(gseDesNoOut$BrainRegion, colorMapBrainRegion))
-heatmap.2(corDatnoOutNorm, col = jGnBuFun, trace = "none", ColSideColors = cColnoOutNorm, 
-    RowSideColors = rColnoOutNorm)
+corDatNoOutNorm <- cor(gseDatNoOut)
+cColNoOutNorm <- unlist(lapply(gseDesNoOut$Genotype, colorMapGenotype))
+rColNoOutNorm <- unlist(lapply(gseDesNoOut$BrainRegion, colorMapBrainRegion))
+heatmap.2(corDatNoOutNorm, col = jGnBuFun, trace = "none", ColSideColors = cColNoOutNorm, 
+    RowSideColors = rColNoOutNorm)
 ```
 
 ![plot of chunk unnamed-chunk-32](figure/unnamed-chunk-32.png) 
@@ -653,7 +653,7 @@ With the outlier gone it is easier to see contrast within the heatmap. The tissu
 How many samples remain? 
 
 ```r
-ncol(gseDatnoOutNorm)
+ncol(gseDatNoOutNorm)
 ```
 
 ```
@@ -664,7 +664,7 @@ ncol(gseDatnoOutNorm)
 Plotting again:
 
 ```r
-gseDesDatNoOutNorm <- prepareData(row.names(gseDat), gseDatnoOutNorm, subset(gseDes, 
+gseDesDatNoOutNorm <- prepareData(row.names(gseDat), gseDatNoOutNorm, subset(gseDes, 
     sampleID != "GSM172976"))
 ggplot(gseDesDatNoOutNorm, aes(sampleID, gExp)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, 
     hjust = 1))
@@ -681,7 +681,7 @@ Worst outlier removed, quantile normalization, restricted to neocortex:
 gseDesNoOut <- subset(gseDes, sampleID != "GSM172976")
 neoCDes <- subset(gseDesNoOut, BrainRegion == "neocortex")
 neoCDesDat <- subset(gseDesDatNoOutNorm, BrainRegion == "neocortex")
-neoCDat <- gseDat[, colnames(gseDat) == neoCDes$sampleID]
+neoCDat <- gseDatNoOutNorm[, colnames(gseDat) == neoCDes$sampleID]
 ```
 
 
@@ -691,14 +691,16 @@ In the context of that model, what statistical test(s) are you conducting?
 
 I will be using a ANOVA-style, ref + tx effects test. In this case we have 1 catagorical covariates: Genotype, with 3 levels (wt, S1P2_KO, S1P3_KO).
 
-Precisely what we are testing if:
-$$latex
-Y_wt = \theta + \E_w_t
-Y_wt,S1P2KO = \theta + \tau + \E
-$$
+The formula is $latex Y_{ij} = \theta + \tau_j + \epsilon_{ij}$ where j is our Genotype. By convention $latex \tau_j$ for Wild_type is 0, as it will be our reference.
+
+Our null hypothesis $latex H_0$ is $latex \tau_j = 0 $.
 
 
 ```r
+# reorganize levels
+neoCDes$Genotype <- factor(neoCDes$Genotype, levels = c("Wild_type", "S1P2_KO", 
+    "S1P3_KO"))
+
 neoCDesMat <- model.matrix(~Genotype, neoCDes)
 str(neoCDesMat)
 ```
@@ -707,7 +709,7 @@ str(neoCDesMat)
 ##  num [1:25, 1:3] 1 1 1 1 1 1 1 1 1 1 ...
 ##  - attr(*, "dimnames")=List of 2
 ##   ..$ : chr [1:25] "GSM172927" "GSM172928" "GSM172929" "GSM172930" ...
-##   ..$ : chr [1:3] "(Intercept)" "GenotypeS1P3_KO" "GenotypeWild_type"
+##   ..$ : chr [1:3] "(Intercept)" "GenotypeS1P2_KO" "GenotypeS1P3_KO"
 ##  - attr(*, "assign")= int [1:3] 0 1 1
 ##  - attr(*, "contrasts")=List of 1
 ##   ..$ Genotype: chr "contr.treatment"
@@ -716,32 +718,6 @@ str(neoCDesMat)
 ```r
 neoCFit <- lmFit(neoCDat, neoCDesMat)
 neoCFitEB <- eBayes(neoCFit)
-topTable(neoCFitEB)
-```
-
-```
-##             X.Intercept. GenotypeS1P3_KO GenotypeWild_type AveExpr      F
-## 101255_at          12.57          -0.027             0.050   12.59 199093
-## 96955_at           11.02          -0.031             0.024   11.03 185470
-## 98759_f_at         11.85           0.023            -0.065   11.83 185447
-## 95359_at           11.84           0.024            -0.005   11.84 185005
-## 100343_f_at        11.73           0.071            -0.021   11.74 180122
-## 101016_at          11.34           0.010            -0.029   11.33 170583
-## 101543_f_at        12.19           0.056            -0.047   12.18 159476
-## 96859_at           10.84           0.006            -0.013   10.84 158640
-## 100213_f_at        12.62           0.013             0.029   12.63 158245
-## 99014_at           10.33           0.073             0.013   10.35 154059
-##               P.Value adj.P.Val
-## 101255_at   7.475e-66 7.153e-62
-## 96955_at    2.216e-65 7.153e-62
-## 98759_f_at  2.221e-65 7.153e-62
-## 95359_at    2.303e-65 7.153e-62
-## 100343_f_at 3.472e-65 8.625e-62
-## 101016_at   7.996e-65 1.655e-61
-## 101543_f_at 2.245e-64 3.490e-61
-## 96859_at    2.434e-64 3.490e-61
-## 100213_f_at 2.529e-64 3.490e-61
-## 99014_at    3.814e-64 4.738e-61
 ```
 
 
@@ -751,103 +727,241 @@ Display the expression data for the top 50 probes in a heat map. Order the probe
 
 
 ```r
-neoCDesMat <- model.matrix(~Genotype, neoCDes)
-str(neoCDesMat)
+tTbl50 <- topTable(neoCFitEB, number = 50, coef = c("GenotypeS1P2_KO", "GenotypeS1P3_KO"))  #do not use Wild_type as it is our intercept
+# note I tried sort.by = 'p' but it threw an error for some reason
+
+OrdTTbl50 <- tTbl50[order(tTbl50$P.Value), ]
+heatmap.2(as.matrix(neoCDat[rownames(OrdTTbl50), ]), trace = "none", dendrogram = "none", 
+    Rowv = FALSE, Colv = FALSE, col = jGnBuFun)
 ```
 
-```
-##  num [1:25, 1:3] 1 1 1 1 1 1 1 1 1 1 ...
-##  - attr(*, "dimnames")=List of 2
-##   ..$ : chr [1:25] "GSM172927" "GSM172928" "GSM172929" "GSM172930" ...
-##   ..$ : chr [1:3] "(Intercept)" "GenotypeS1P3_KO" "GenotypeWild_type"
-##  - attr(*, "assign")= int [1:3] 0 1 1
-##  - attr(*, "contrasts")=List of 1
-##   ..$ Genotype: chr "contr.treatment"
-```
+![plot of chunk unnamed-chunk-37](figure/unnamed-chunk-37.png) 
 
-```r
-neoCFit <- lmFit(neoCDat, neoCDesMat)
-neoCFitEB <- eBayes(neoCFit)
-topTable(neoCFitEB)
-```
-
-```
-##             X.Intercept. GenotypeS1P3_KO GenotypeWild_type AveExpr      F
-## 101255_at          12.57          -0.027             0.050   12.59 199093
-## 96955_at           11.02          -0.031             0.024   11.03 185470
-## 98759_f_at         11.85           0.023            -0.065   11.83 185447
-## 95359_at           11.84           0.024            -0.005   11.84 185005
-## 100343_f_at        11.73           0.071            -0.021   11.74 180122
-## 101016_at          11.34           0.010            -0.029   11.33 170583
-## 101543_f_at        12.19           0.056            -0.047   12.18 159476
-## 96859_at           10.84           0.006            -0.013   10.84 158640
-## 100213_f_at        12.62           0.013             0.029   12.63 158245
-## 99014_at           10.33           0.073             0.013   10.35 154059
-##               P.Value adj.P.Val
-## 101255_at   7.475e-66 7.153e-62
-## 96955_at    2.216e-65 7.153e-62
-## 98759_f_at  2.221e-65 7.153e-62
-## 95359_at    2.303e-65 7.153e-62
-## 100343_f_at 3.472e-65 8.625e-62
-## 101016_at   7.996e-65 1.655e-61
-## 101543_f_at 2.245e-64 3.490e-61
-## 96859_at    2.434e-64 3.490e-61
-## 100213_f_at 2.529e-64 3.490e-61
-## 99014_at    3.814e-64 4.738e-61
-```
-
-
+It seems that there is more variation within probes then between samples.
 
 #### Q4c: Count your hits.
 
 How many probes have unadjusted p-value < 10e-4? If we took the top 50 probes as our "hits", what is the (estimated) false discovery rate? How many of these hits do we expect to be false discoveries?
 
 
+```r
+tTbl <- topTable(neoCFitEB, number = Inf, coef = c("GenotypeS1P2_KO", "GenotypeS1P3_KO"))
+nrow(tTbl[tTbl$P.Value < 0.001, ])
+```
+
+```
+## [1] 96
+```
+
+
+If we took the top 50 probes as our "hits", what is the (estimated) false discovery rate?
+adj.P.Val = FDR, thus:
+
+```r
+tTbl[50, "adj.P.Val"]
+```
+
+```
+## [1] 0.07594
+```
+
+
+How many of these hits do we expect to be false discoveries?
+
+```r
+round(tTbl[50, "adj.P.Val"] * 50)
+```
+
+```
+## [1] 4
+```
 
 
 #### Q4d: Plot the gene expression data for a few top hits and a few boring probes.
-
 What are the p-values associated with these probes? Comment on the plots.
 
+```r
+# find top hits:
+topHits <- head(tTbl, n = 4)
+# plot
+topDat <- prepareData(row.names(topHits), neoCDat, neoCDes)
+ggplot(topDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jitter") + 
+    facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+![plot of chunk unnamed-chunk-41](figure/unnamed-chunk-41.png) 
+
+You can really see difference in gene expression at each genotype from the wt from the two genotypes.
 
 
+```r
+# find boring hits:
+borHits <- tail(tTbl, n = 4)
+borDat <- prepareData(row.names(borHits), neoCDat, neoCDes)
+ggplot(borDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jitter") + 
+    facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
 
+![plot of chunk unnamed-chunk-42](figure/unnamed-chunk-42.png) 
 
-
+One of them seems to have one datapoint higher than expected but overall plots seeme uniform for all genotypes.
 
 #### Q4e: Find probes where the expression in the S1P3 knockout is different from that of wild type.
-
 How many hits do you find if you control FDR at 0.10?
 
+```r
+tTblP3 <- topTable(neoCFitEB, number = Inf, coef = c("GenotypeS1P3_KO"))
+nrow(tTblP3[tTblP3$adj.P.Val < 0.1, ])
+```
 
+```
+## [1] 61
+```
+
+
+we can expect the following number to not be true hits:
+
+```r
+round(nrow(tTblP3[tTblP3$adj.P.Val < 0.1, ]) * 0.1)
+```
+
+```
+## [1] 6
+```
 
 
 ### Q5 **(5 points)** Differential expression analysis for Genotype * BrainRegion.
-
 You should be using data with the worst outlier removed, after quantile normalization and for both brain regions.
 
 #### Q5a: Fit a 3x2 full factorial model.
+Test for any effect of Genotype and/or BrainRegion, i.e. test your model against a model with just an intercept. 
 
-Test for any effect of Genotype and/or BrainRegion, i.e. test your model against a model with just an intercept. How many probes have a BH-adjusted p-value, a.k.a. q-value, less than 10e-4?
+```r
+# reorganize levels
+gseDesNoOut$Genotype <- factor(gseDesNoOut$Genotype, levels = c("Wild_type", 
+    "S1P2_KO", "S1P3_KO"))
+gseDesMat <- model.matrix(~Genotype * BrainRegion, gseDesNoOut)
+gseFit <- lmFit(gseDatNoOutNorm, gseDesMat)
+gseFitEB <- eBayes(gseFit)
+colnames(coef(gseFitEB))
+```
+
+```
+## [1] "(Intercept)"                         
+## [2] "GenotypeS1P2_KO"                     
+## [3] "GenotypeS1P3_KO"                     
+## [4] "BrainRegionneocortex"                
+## [5] "GenotypeS1P2_KO:BrainRegionneocortex"
+## [6] "GenotypeS1P3_KO:BrainRegionneocortex"
+```
 
 
+How many probes have a BH-adjusted p-value, a.k.a. q-value, less than 10e-4?
+
+```r
+gesTTbl <- topTable(gseFitEB, number = Inf, coef = 2:ncol(coef(gseFitEB)))
+nrow(gesTTbl[gesTTbl$adj.P.Val < 0.001, ])
+```
+
+```
+## [1] 1524
+```
 
 
 #### Q5b: Test the null hypothesis that BrainRegion doesn't matter, i.e. that all terms involving BrainRegion are zero.
-
 How many probes have a BH-adjusted p-value less than 0.1?
 
+```r
+brainTTbl <- topTable(gseFitEB, number = Inf, coef = grep("Brain", colnames(coef(gseFitEB))))
+nrow(brainTTbl[brainTTbl$adj.P.Val < 0.1, ])
+```
 
+```
+## [1] 3227
+```
 
 
 #### Q5c: Highlight some probes where BrainRegion does and does not matter.
-
 Using the results from Q5b, plot and describe some results for a couple of hits and non-hits.
 
+```r
+# find top hits:
+brainTopHits <- head(brainTTbl, n = 4)
+# plot
+brainTopDat <- prepareData(row.names(brainTopHits), gseDatNoOutNorm, gseDesNoOut)
+ggplot(brainTopDat, aes(BrainRegion, gExp)) + geom_violin() + geom_point(aes(colour = Genotype), 
+    position = "jitter") + facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1))
+```
+
+![plot of chunk unnamed-chunk-48](figure/unnamed-chunk-48.png) 
+
+Brain tissue dominates the plot, it seems unlikely if genotype is contributing to calling the hit.
 
 
+```r
+# find boring hits:
+brainBorHits <- tail(brainTTbl, n = 4)
+# plot
+brainBorDat <- prepareData(row.names(brainBorHits), gseDatNoOutNorm, gseDesNoOut)
+ggplot(brainBorDat, aes(BrainRegion, gExp)) + geom_violin() + geom_point(aes(colour = Genotype), 
+    position = "jitter") + facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1))
+```
+
+![plot of chunk unnamed-chunk-49](figure/unnamed-chunk-49.png) 
+
+Brain region for all of them seems to not contribute.
 
 #### Q5d: Test the null hypothesis that Genotype doesn't matter, i.e. that all terms involving Genotype are zero.
 
-How many probes have a BH-adjusted p-value less than 0.1? Compare these results to those obtained for BrainRegion in Q5b, either based on this count or based on all the p-values. What do you conclude about the relative magnitude of the influence of brain region vs. genotype on gene expression?
 
+```r
+geneTTbl <- topTable(gseFitEB, number = Inf, coef = grep("Genotype", colnames(coef(gseFitEB))))
+```
+
+
+
+```r
+# find top hits:
+geneTopHits <- head(geneTTbl, n = 4)
+# plot
+geneTopDat <- prepareData(row.names(geneTopHits), gseDatNoOutNorm, gseDesNoOut)
+ggplot(geneTopDat, aes(Genotype, gExp)) + geom_violin() + geom_point(aes(colour = BrainRegion), 
+    position = "jitter") + facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1))
+```
+
+![plot of chunk unnamed-chunk-51](figure/unnamed-chunk-51.png) 
+
+We see good examples of genotype clearly mattering.
+
+
+```r
+# find boring hits:
+geneBorHits <- tail(geneTTbl, n = 4)
+# plot
+geneBorDat <- prepareData(row.names(geneBorHits), gseDatNoOutNorm, gseDesNoOut)
+ggplot(geneBorDat, aes(Genotype, gExp)) + geom_violin() + geom_point(aes(colour = BrainRegion), 
+    position = "jitter") + facet_wrap(~gene) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1))
+```
+
+![plot of chunk unnamed-chunk-52](figure/unnamed-chunk-52.png) 
+
+Interestly we see one probe where it clearly sepaerate be brain region.
+
+How many probes have a BH-adjusted p-value less than 0.1?
+
+```r
+nrow(geneTTbl[geneTTbl$adj.P.Val < 0.1, ])
+```
+
+```
+## [1] 141
+```
+
+
+Compare these results to those obtained for BrainRegion in Q5b, either based on this count or based on all the p-values. What do you conclude about the relative magnitude of the influence of brain region vs. genotype on gene expression?
+
+Well we have 141 hits vs 3227 hits, that is like a 23 time difference so I think we can clearly say that brain region has a much larger influence on gene expression.
