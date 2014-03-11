@@ -731,8 +731,9 @@ tTbl50 <- topTable(neoCFitEB, number = 50, coef = c("GenotypeS1P2_KO", "Genotype
 # note I tried sort.by = 'p' but it threw an error for some reason
 
 OrdTTbl50 <- tTbl50[order(tTbl50$P.Value), ]
-heatmap.2(as.matrix(neoCDat[rownames(OrdTTbl50), ]), trace = "none", dendrogram = "none", 
-    Rowv = FALSE, Colv = FALSE, col = jGnBuFun)
+neoCDesOrd <- order(neoCDes$Genotype)
+heatmap.2(as.matrix(neoCDat[rownames(OrdTTbl50), neoCDesOrd]), trace = "none", 
+    dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun)
 ```
 
 ![plot of chunk unnamed-chunk-37](figure/unnamed-chunk-37.png) 
@@ -791,6 +792,24 @@ ggplot(topDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jit
 
 ![plot of chunk unnamed-chunk-41](figure/unnamed-chunk-41.png) 
 
+```r
+# pvalues:
+topHits
+```
+
+```
+##           GenotypeS1P2_KO GenotypeS1P3_KO AveExpr     F   P.Value
+## 98590_at           0.2690          0.4729   6.849 25.69 3.091e-07
+## 160832_at         -0.2662         -0.2405   6.689 21.14 1.840e-06
+## 92482_at           0.4765          0.7452   6.549 20.80 2.120e-06
+## 93574_at           0.2796          0.1897   5.169 19.49 3.703e-06
+##           adj.P.Val
+## 98590_at   0.003840
+## 160832_at  0.008778
+## 92482_at   0.008778
+## 93574_at   0.009625
+```
+
 You can really see difference in gene expression at each genotype from the wt from the two genotypes.
 
 
@@ -803,6 +822,24 @@ ggplot(borDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jit
 ```
 
 ![plot of chunk unnamed-chunk-42](figure/unnamed-chunk-42.png) 
+
+```r
+# pvalues:
+borHits
+```
+
+```
+##             GenotypeS1P2_KO GenotypeS1P3_KO AveExpr         F P.Value
+## 99926_at         -0.0026306      -8.061e-05   6.692 5.112e-04  0.9995
+## 160994_at         0.0006061       1.639e-03   6.574 4.337e-04  0.9996
+## 94211_at         -0.0002204      -1.286e-03   6.262 4.117e-04  0.9996
+## 162455_f_at       0.0002286      -3.918e-04   6.646 7.099e-05  0.9999
+##             adj.P.Val
+## 99926_at       0.9997
+## 160994_at      0.9997
+## 94211_at       0.9997
+## 162455_f_at    0.9999
+```
 
 One of them seems to have one datapoint higher than expected but overall plots seeme uniform for all genotypes.
 

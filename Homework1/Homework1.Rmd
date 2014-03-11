@@ -384,7 +384,8 @@ tTbl50 <- topTable(neoCFitEB, number = 50, coef = c("GenotypeS1P2_KO","GenotypeS
 #note I tried sort.by = "p" but it threw an error for some reason
 
 OrdTTbl50 <- tTbl50[order(tTbl50$P.Value),]
-heatmap.2(as.matrix(neoCDat[rownames(OrdTTbl50), ]), trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun)
+neoCDesOrd <-order(neoCDes$Genotype)
+heatmap.2(as.matrix(neoCDat[rownames(OrdTTbl50), neoCDesOrd]), trace = "none", dendrogram = "none", Rowv = FALSE, Colv = FALSE, col = jGnBuFun)
 ```
 It seems that there is more variation within probes then between samples.
 
@@ -416,6 +417,8 @@ topHits <- head(tTbl, n = 4)
 #plot
 topDat <- prepareData(row.names(topHits), neoCDat, neoCDes)
 ggplot(topDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jitter") + facet_wrap(~ gene) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#pvalues:
+topHits
 ```
 You can really see difference in gene expression at each genotype from the wt from the two genotypes.
 
@@ -424,6 +427,8 @@ You can really see difference in gene expression at each genotype from the wt fr
 borHits <- tail(tTbl, n = 4)
 borDat <- prepareData(row.names(borHits), neoCDat, neoCDes)
 ggplot(borDat, aes(Genotype, gExp)) + geom_violin() + geom_point(position = "jitter") + facet_wrap(~ gene) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#pvalues:
+borHits
 ```
 One of them seems to have one datapoint higher than expected but overall plots seeme uniform for all genotypes.
 
