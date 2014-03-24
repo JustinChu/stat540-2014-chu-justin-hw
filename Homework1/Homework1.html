@@ -863,6 +863,8 @@ neoCDat &lt;- gseDatNoOutNorm[, colnames(gseDat) == neoCDes$sampleID]
 
 <p>Our null hypothesis \( H_0 \) is \( \tau_j = 0  \).</p>
 
+<p>I will utilize a modified F Test provided by the eBayes package.</p>
+
 <pre><code class="r"># reorganize levels
 neoCDes$Genotype &lt;- factor(neoCDes$Genotype, levels = c(&quot;Wild_type&quot;, &quot;S1P2_KO&quot;, 
     &quot;S1P3_KO&quot;))

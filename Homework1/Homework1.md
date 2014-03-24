@@ -695,6 +695,8 @@ The formula is $latex Y_{ij} = \theta + \tau_j + \epsilon_{ij}$ where j is our G
 
 Our null hypothesis $latex H_0$ is $latex \tau_j = 0 $.
 
+I will utilize a modified F Test provided by the eBayes package.
+
 
 ```r
 # reorganize levels
