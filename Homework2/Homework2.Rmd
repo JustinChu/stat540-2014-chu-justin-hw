@@ -43,7 +43,7 @@ In addition to reporting number of rows and columns, make it clear what rows and
 str(gseDat)
 head(gseDat)
 ```
-I am interpreting the columns names as samples and rows names as probes. The intersetions are some measure of gene expression. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
+I am interpreting the columns names as samples and rows names as probes. The intersetions are some measure of expression based on hybridization on the microarray. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
 
 ### b) (2pt) Identify Sample Swap
 
@@ -181,7 +181,8 @@ ggplot(topDat, aes(type, gExp)) + geom_violin() + geom_point(position = "jitter"
 
 iii. How many probes are identified as differentially expressed at a false discovery rate (FDR) of 1e-5 (note: this is a FDR cutoff used in the original paper)?
 ```{r}
-nrow(subset(gseRes[order(gseRes$p.value),], q.value < 1e-5))
+arrayDE <- subset(gseRes[order(gseRes$p.value),], q.value < 1e-5)
+nrow(arrayDE)
 ```
 
 iv. Save your results for later with `write.table()`.
@@ -198,58 +199,87 @@ We have aligned the RNA-Seq library using the [Stampy](http://www.well.ox.ac.uk/
 
 Load the count data using `read.table`; you will need to pass the arguments `header=TRUE` and `row.names=1`. 
 
-i) What are dimensions of the dataset? In addition to reporting number of rows and columns, make it clear what rows and columns represent. What is the difference between the rows of this dataset versus rows of the array data in question 1a?
+```{r}
+countDat <- read.table("stampy.counts.tsv" , header=TRUE, row.names=1)
+```
 
+i) What are dimensions of the dataset?
+```{r}
+dim(countDat)
+```
 
-
+In addition to reporting number of rows and columns, make it clear what rows and columns represent. What is the difference between the rows of this dataset versus rows of the array data in question 1a?
+```{r}
+str(countDat)
+head(countDat)
+```
+I am interpreting the columns names as samples and rows names as genes (in contrast to 1a which were probes on a microarray). The intersetions are read counts. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
 
 ii) Do a sanity check to make sure there is no sample swap by plotting a heatmap of the sample correlations.
-
-
-
+```{r}
+#run correlation
+corDat <- cor(countDat)
+heatmap.2(corDat, col = jGnBuFun, trace = "none")
+```
+There Doesn't seem to be a sample swap.
 
 ### b) (2pt) `edgeR` Differential Expression Analysis
 
 Now you will use `edgeR` to identify differentially expressed genes between the batch medium vs. chemostat conditions.
 
 i)  Recall that `edgeR` needs to estimate the dispersion parameter in the negative binomial model using an empirical Bayes method. Estimate the dispersion parameters using `estimateGLMCommonDisp`, `estimateGLMTrendedDisp` and `estimateGLMTagwiseDisp`. Plot the tagwise dispersion against log2-CPM (counts per million).  
+```{r}
+#load edge R
+library(edgeR)
 
-> Seminar 7 was now corrected so that the design matrix is used as an argument of `estimateGLMTrendedDisp`.
+with(gseDes, table(type))
 
+group <- factor(c(rep("1", 3), rep("2", 3)))
+group
 
+dge.glm <- DGEList(counts = countDat, group = group)
+design <- model.matrix(~group)
+design
 
+#taken from seminar 7
+dge.glm.com.disp <- estimateGLMCommonDisp(dge.glm, design, verbose = TRUE)
+dge.glm.trend.disp <- estimateGLMTrendedDisp(dge.glm.com.disp, design)
+dge.glm.tag.disp <- estimateGLMTagwiseDisp(dge.glm.trend.disp, design)
+plotBCV(dge.glm.tag.disp)
+```
 
 ii)  Use the glm functionality of `edgeR`, i.e. use the `glmFit` function, to identify differentially expressed genes between conditions. 
 
-
-
-
 Package these results in a data.frame called 'edger.results' with five columns:
-
 * gene.id - The id of the gene which reads were aligned to.
-
 * p.value - The raw p-value for the gene.
-
 * q.value - The BH corrected p-value, aka the q-value.
-
 * log.fc - The log fold change which is the column called "logFC" in the `edgeR` results table.
-
 * test.stat - The test statistic, which for `edgeR` is a likelihood ratio. This is the column called "LR" in the `edgeR` results table.
+```{r}
+fit <- glmFit(dge.glm.tag.disp, design)
+lrt <- glmLRT(fit, coef = 2)
+tt.glm <- topTags(lrt, n = Inf)$table
+edger.results <- data.frame(gene.id = rownames(tt.glm), p.value = tt.glm$PValue, q.value = tt.glm$FDR, log.fc = tt.glm$logFC, test.stat = tt.glm$LR )
+```
 
 Save your results for later with `write.table()` in file called `stampy.edger.results.tsv`.
-
-
-
+```{r}
+write.table(edger.results, "stampy.edger.results.tsv",row.names = TRUE, col.names = NA)
+```
 
 iii) How many genes are differentially expressed between conditions at a false discovery rate (FDR) of 1e-5?
-
-
-
+```{r}
+edgerTopGenes <- edger.results[edger.results$q.value < 1e-5, ]
+nrow(edgerTopGenes)
+```
 
 iv) How many genes are differentially over-expressed in chemostat compared to batch medium samples at a false discovery rate (FDR) of 1e-5?
-
-
-
+```{r}
+de.glm <- decideTestsDGE(lrt, p = 1e-5, adjust = "fdr")
+summary(de.glm)[3]
+```
+1515 genes are over-expressed.
 
 ### c) (2pt) `DESeq` Differential Expression Analysis
 
@@ -257,75 +287,87 @@ Now you will use `DESeq` to identify differentially expressed genes between the 
 
 i)  `DESeq` also needs to estimate the dispersion. Use `estimateSizeFactors` and `estimateDispersions` to normalize the data. Plot the estimated dispersions against the mean normalized counts.
 
-
-
+```{r}
+library(DESeq)
+deSeqDat <- newCountDataSet(countDat, group)
+deSeqDat <- estimateSizeFactors(deSeqDat)
+deSeqDat <- estimateDispersions(deSeqDat)
+plotDispEsts(deSeqDat)
+```
 
 ii)  Use the negative binomial test of `DESeq`, i.e. use the `nbinomTest` function, to identify differentially expressed genes between conditions. Note that the output of this function does not return results ordered by p-values or logged fold-changes. You can manually reorder the results if you want (not required for this homework).
 
 Package these results in a data.frame called 'deseq.results' with four columns:
-
 * gene.id - The id of the gene which reads were aligned to.
-
 * p.value - The raw p-value for the gene.
-
 * q.value - The BH corrected p-value, aka the q-value.
-
 * log.fc - The log fold change which is the column called "logFC" in the `edgeR` results table.
+```{r}
+deSeqResults <- nbinomTest(deSeqDat, levels(group)[1], levels(group)[2])
+#reorder by pvalue
+deSeqResults <- deSeqResults[with(deSeqResults, order(pval)), ]
+deseq.results <- data.frame(gene.id = deSeqResults$id, p.value = deSeqResults$pval, q.value = deSeqResults$padj, log.fc = deSeqResults$log2FoldChange)
+```
 
 Save your results for later with `write.table()` in file called `stampy.deseq.results.tsv`.
-
-
-
+```{r}
+write.table(deseq.results, "stampy.deseq.results.tsv",row.names = TRUE, col.names = NA)
+```
 
 iii) How many genes are differentially expressed between conditions at a false discovery rate (FDR) of 1e-5?
-
-
-
+```{r}
+deseqTopGenes <- deseq.results[deseq.results$q.value < 1e-5, ]
+nrow(deseqTopGenes)
+```
 
 iv) How many differentially expressed genes are identified by both 'edgeR' and 'DESeq'?
-
-> The function `intersect` -- which finds the elements common to two sets (vectors) -- will be helpful.
-
-
-
+```{r}
+sharedGenes <- intersect(edgerTopGenes$gene.id, deseqTopGenes$gene.id)
+length(sharedGenes)
+```
 
 ### d) (2pt) `voom` Differential Expression Analysis
 
 Now you will use `voom+limma` to identify differentially expressed genes between the batch medium vs. chemostat conditions.
 
 i)  `voom` normalizes the counts before it converts counts to log2-cpm. Use `calcNormFactors` to normalize counts.
-
-
-
+```{r}
+norm.factor <- calcNormFactors(countDat)
+```
 
 ii)  Use `voom' to convert count data into logged CPM data and then use 'limma' to identify differentially expressed genes between conditions. 
 
 Package these results in a data.frame called 'voom.limma.results' with five columns:
-
 * gene.id - The id of the gene which reads were aligned to.
-
 * p.value - The raw p-value for the gene.
-
 * q.value - The BH corrected p-value, aka the q-value.
-
 * log.fc - The log fold change which is the column called "logFC" in the `edgeR` results table.
-
 * test.stat - The test statistic, which is the column called "t".
+```{r}
+dat.voomed <- voom(countDat, design, plot = TRUE, lib.size = colSums(countDat) * norm.factor)
+fit <- lmFit(dat.voomed, design)
+fit <- eBayes(fit)
+voomTTbl <- topTable(fit, n = Inf, coef = c("group2"))
+limma.results <- data.frame(gene.id = rownames(voomTTbl), p.value = voomTTbl$P.Value, q.value = voomTTbl$adj.P.Val, log.fc = voomTTbl$logFC, test.stat <- voomTTbl$t)
+```
 
 Save your results for later with `write.table()` in file called `stampy.limma.results.tsv`.
-
-
+```{r}
+write.table(limma.results, "stampy.limma.results.tsv",row.names = TRUE, col.names = NA)
+```
 
 
 iii) How many genes are differentially expressed between conditions at a false discovery rate (FDR) of 1e-5?
-
-
-
+```{r}
+limmaTopGenes <- limma.results[limma.results$q.value < 1e-5, ]
+nrow(limmaTopGenes)
+```
 
 iv)  What fraction of the genes identified using `voom+limma` are also found by `edger` and `DESeq` methods? For example if the DE analysis using `voom+limma` found 1000 genes and both `edgeR` and `DESeq`  found 500 of these, the fraction of genes found would be $\frac{500}{1000}=0.5$.
-
-
-
+```{r}
+sharedGenes3 <- intersect(limmaTopGenes$gene.id,sharedGenes)
+length(sharedGenes3)/length(limmaTopGenes$gene.id)
+```
 
 ### e) (3pt) Comparison of Differential Expression Analyses
  
@@ -333,110 +375,80 @@ Now that we have the results of the differential expression analysis performed b
 
 i) In previous questions, we noticed that different methods identified different differentially expressed genes. Create a Venn diagram showing all genes identified as differentially expressed by `edgeR`, `DESeq`, and `voom+limma`. Check your if your answers to questions 2c-iv, and 2d-iv are correct.
 
-> The Venn diagram can be drawn using the `VennDiagram` package. It's a little obtuse if you want to plot to screen (or embed image using knitr), but the following code should get you started. Also be aware there is an argument called `force.unique`, which defaults to TRUE, that determines how elements that appear more than once in a set are handled when forming the Venn counts. Since multiple probes in the array data can map to the same gene, you will obtain different answers depending on the value of this parameter.
-
-
-```r
+```{r}
 library(VennDiagram)
 
-# Fake some gene names for 4 different methods.  Note that in this example,
-# I'm comparing 4 different sets so that you can see how to handle more
-# complex cases.
+de.genes <- list(voom_limma = limmaTopGenes$gene.id, edger = edgerTopGenes$gene.id, DESeq = deseqTopGenes$gene.id)
 
-method1.de.genes <- c("A", "B", "C")
-
-method2.de.genes <- c("A", "B", "D", "E", "F")
-
-method3.de.genes <- c("A", "B", "D", "E")
-
-method4.de.genes <- c("A", "V", "E", "F")
-
-# Put the things you want to plot in a list. The names in the list will be
-# put on the plot.
-de.genes <- list(Method1 = method1.de.genes, Method2 = method2.de.genes, Method3 = method3.de.genes, 
-    Method4 = method4.de.genes)
-
-# Start a new plot
 plot.new()
+venn.plot <- venn.diagram(de.genes, filename = NULL, fill = c("red", "blue", "green"))
 
-# Draw the Venn diagram. Note the argument `filename=NULL` tells it to
-# create a plot object instead of outputting to file.
-venn.plot <- venn.diagram(de.genes, filename = NULL, fill = c("red", "blue", 
-    "green", "yellow"))
-
-# Draw the plot on the screen.
 grid.draw(venn.plot)
 ```
 
-
-
-
-
 ii) Using the function `plotSmear` function from `edgeR`, you can look at a scatterplot of observed differential expression (y-axis) against overall abundance (x-axis), both axes logarithmically transformed -- to check that putative DE genes seem plausible. Create a smear plot. Within this plot, identify the set of genes which are differentially expressed at an FDR of 1e-5 using all three methods (i.e., the q-values estimated by `edgeR`, `DESeq`, and `voom` are below 1e-5). Explain how you interpret this plot. Do you see reasonable results?
 
-> Use the output of `DGEList` as the object of `plotSmear`. Use de.tags to highlight genes selected by all methods.
-
-
-
+```{r}
+plotSmear(dge.glm, de.tags = sharedGenes3)
+```
+TODO EXPLAIN PLOT!!
 
 iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESeq`. Illustrate the logged counts of them. Compare the (log) counts of these two genes with those of two genes identified by the three methods (see example below)
 
-> As an example, I illustrate two gene that were identified by all three methods. The function `setdiff` is helpful to find differences between two sets.
-
-
-
-
-
-
-```r
-featureMe <- c("YDR384C", "YDR345C")
-(featureCounts <- counts[featureMe, ])
+```{r}
+missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, topGenes$gene.id), deseqTopGenes$gene.id)
+(featureCounts <- countDat[missingGenes, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
-    cond = factor(rep(groups, each = nrow(featureCounts))), log.count = log2(unlist(featureCounts)))
-stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitter = TRUE)
-
-# Using the example created before to illustrate the `setdiff` function
-setdiff(method1.de.genes, method2.de.genes)  #'C' is present in Method1 but not in Method2
+    cond = factor(rep(group, each = nrow(featureCounts))), log.count = log2(unlist(featureCounts)))
+stripplot(gene.id ~ log.count, featureDat, group = cond, auto.key = TRUE, jitter = TRUE)
 ```
-
-
-
-
+TODO: DISCUSS!!
 
 ## Q3) Compare DEA results between RNA-Seq and array
 
 In question 1, you performed a DEA of array data using `limma`. In question 2a, you performed a DEA of RNA-Seq data using `edgeR`, among other methods. In this question you will compare the results of those two analyses. 
 
-> Remember that you've packaged your results and saved them using `write.table()`. If the data.frames containing the results of these analyses are no longer in your workspace, load them using `read.table()`.
-
 i) Use a Venn diagram to display the overlap and non-overlap of the __genes__ identified as differentially expressed at an FDR of 1e-5 by these analyses.
 
-> Note that the number of __probes__ that you identified as differentially expressed at an FDR of 1e-5 in question 1c(iii) may be different from the number of __genes__ identified as differentially expressed at the same FDR! Why? The use of the argument `force.unique` of `venn.diagram()` is crucial here.
-
-
-
+```{r}
+edgeRDEGenes <- list(RNA_Seq = edgerTopGenes$gene.id, Array = arrayDE$gene.id)
+plot.new()
+venn.plot <- venn.diagram(edgeRDEGenes, filename = NULL, fill = c("red", "blue"), force.unique = TRUE)
+grid.draw(venn.plot)
+```
 
 ii) As expected, more genes were identified as differentially expressed using RNA-Seq data. In this question, you will examine the difference between the q-values from both analyses by overlaying density plots of the q-values from each analysis.
 
-  * To respond to this question, make two plots. One plot that includes the densities of q-values of the genes analyzed by both platforms (i.e., genes shared by both data frames), and another plot that includes the densities of q-values of ALL genes analyzed by at least one of the platforms.
-  
+To respond to this question, make two plots:
+* One plot that includes the densities of q-values of the genes analyzed by both platforms (i.e., genes shared by both data frames)
+* another plot that includes the densities of q-values of ALL genes analyzed by at least one of the platforms.
 Make some observations about the strengths of these two platforms.
-  
 
+Densities of q-values of the genes analyzed by both platforms:
+```{r}
+bothDat <- intersect(edger.results$gene.id, gseRes$gene.id)
 
-
-
-
-
-iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it. Consult the DEA results from your previous analyses for these genes. For each gene, state its status with respect to these analyses, i.e. where it falls in those Venn diagrams. Comment on the results and plots.
-
-The data set is on GitHub and in the course webpage:
-
-  * <https://raw.github.com/jennybc/stat540_2014/master/examples/yeastPlatforms/data/featGenesData-q3-DPUT.txt>
-  * <http://www.ugrad.stat.ubc.ca/~stat540/examples/yeastPlatforms/data/featGenesData-q3-DPUT.txt>
-  
-Load it with a line like this:  
+p <- ggplot(edger.results[edger.results$gene.id %in% bothDat,], aes(x=q.value)) + geom_density(fill="blue", alpha =0.5)
+p <- p + geom_density(data = gseRes[gseRes$gene.id %in% bothDat,], fill="red", alpha =0.5) 
+p
 ```
+TODO: COMMENT AND ADD LEGEND FOR WHAT EACH COLOUR MEANS
+
+Densities of q-values of ALL genes analyzed by at least one of the platforms:
+```{r}
+allDat <- union(edger.results$gene.id, gseRes$gene.id)
+
+p <- ggplot(edger.results[edger.results$gene.id %in% allDat,], aes(x=q.value)) + geom_density(fill="blue", alpha =0.5)
+p <- p + geom_density(data = gseRes[gseRes$gene.id %in% allDat,], fill="red", alpha =0.5) 
+p
+```
+
+iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it.
+
+Consult the DEA results from your previous analyses for these genes. For each gene, state its status with respect to these analyses, i.e. where it falls in those Venn diagrams. Comment on the results and plots.
+
+```{r}
 jDat <- dget("featGenesData-q3-DPUT.txt")
+jDat$gene.id
 ```
-
+TODO DISCUSS
