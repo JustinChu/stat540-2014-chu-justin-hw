@@ -895,6 +895,7 @@ p
 
 ![plot of chunk unnamed-chunk-42](figure/unnamed-chunk-42.png) 
 
+TODO: COMMENT AND ADD LEGEND FOR WHAT EACH COLOUR MEANS
 
 Densities of q-values of ALL genes analyzed by at least one of the platforms:
 
@@ -911,15 +912,104 @@ p
 ![plot of chunk unnamed-chunk-43](figure/unnamed-chunk-43.png) 
 
 
-iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it. Consult the DEA results from your previous analyses for these genes. For each gene, state its status with respect to these analyses, i.e. where it falls in those Venn diagrams. Comment on the results and plots.
+iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it.
 
-The data set is on GitHub and in the course webpage:
+Consult the DEA results from your previous analyses for these genes. For each gene, state its status with respect to these analyses, i.e. where it falls in those Venn diagrams. Comment on the results and plots.
 
-  * <https://raw.github.com/jennybc/stat540_2014/master/examples/yeastPlatforms/data/featGenesData-q3-DPUT.txt>
-  * <http://www.ugrad.stat.ubc.ca/~stat540/examples/yeastPlatforms/data/featGenesData-q3-DPUT.txt>
-  
-Load it with a line like this:  
-```
+
+```r
 jDat <- dget("featGenesData-q3-DPUT.txt")
+
+ggplot(jDat, aes(x = arrayExp, y = probe.id, colour = cond)) + geom_point()
 ```
 
+![plot of chunk unnamed-chunk-44](figure/unnamed-chunk-441.png) 
+
+```r
+ggplot(jDat, aes(x = log.count, y = probe.id, colour = cond)) + geom_point()
+```
+
+![plot of chunk unnamed-chunk-44](figure/unnamed-chunk-442.png) 
+
+```r
+
+jDat$array <- jDat$gene.id %in% arrayDE$gene.id
+jDat$limma <- jDat$gene.id %in% limmaTopGenes$gene.id
+jDat$edger <- jDat$gene.id %in% edgerTopGenes$gene.id
+jDat$deseq <- jDat$gene.id %in% deseqTopGenes$gene.id
+jDat
+```
+
+```
+##      gene.id      cond log.count arrayExp   probe.id array limma edger
+## b12  YDR345C     batch    12.588   11.595 1770682_at  TRUE  TRUE  TRUE
+## b22  YDR345C     batch    13.075   11.622 1770682_at  TRUE  TRUE  TRUE
+## b32  YDR345C     batch    12.634   11.809 1770682_at  TRUE  TRUE  TRUE
+## c12  YDR345C chemostat     8.331    7.529 1770682_at  TRUE  TRUE  TRUE
+## c22  YDR345C chemostat     8.430    7.730 1770682_at  TRUE  TRUE  TRUE
+## c32  YDR345C chemostat     8.852    7.763 1770682_at  TRUE  TRUE  TRUE
+## b11  YDR384C     batch     7.459    8.102 1778111_at  TRUE  TRUE  TRUE
+## b21  YDR384C     batch     7.925    8.491 1778111_at  TRUE  TRUE  TRUE
+## b31  YDR384C     batch     7.508    8.489 1778111_at  TRUE  TRUE  TRUE
+## c11  YDR384C chemostat    11.702   12.278 1778111_at  TRUE  TRUE  TRUE
+## c21  YDR384C chemostat    11.883   12.248 1778111_at  TRUE  TRUE  TRUE
+## c31  YDR384C chemostat    12.146   12.235 1778111_at  TRUE  TRUE  TRUE
+## b13  YBL025W     batch     5.426    6.595 1775334_at FALSE FALSE FALSE
+## b23  YBL025W     batch     6.000    6.564 1775334_at FALSE FALSE FALSE
+## b33  YBL025W     batch     5.644    6.702 1775334_at FALSE FALSE FALSE
+## c13  YBL025W chemostat     5.459    6.564 1775334_at FALSE FALSE FALSE
+## c23  YBL025W chemostat     5.044    6.520 1775334_at FALSE FALSE FALSE
+## c33  YBL025W chemostat     5.931    6.366 1775334_at FALSE FALSE FALSE
+## b121 YCL042W     batch     4.755    2.546 1776330_at FALSE FALSE  TRUE
+## b221 YCL042W     batch     4.392    2.543 1776330_at FALSE FALSE  TRUE
+## b321 YCL042W     batch     3.585    2.501 1776330_at FALSE FALSE  TRUE
+## c121 YCL042W chemostat     6.943    2.625 1776330_at FALSE FALSE  TRUE
+## c221 YCL042W chemostat     6.190    2.839 1776330_at FALSE FALSE  TRUE
+## c321 YCL042W chemostat     6.714    2.521 1776330_at FALSE FALSE  TRUE
+## b111 YGL209W     batch     6.919    7.329 1776471_at  TRUE FALSE FALSE
+## b211 YGL209W     batch     7.229    7.395 1776471_at  TRUE FALSE FALSE
+## b311 YGL209W     batch     6.781    7.368 1776471_at  TRUE FALSE FALSE
+## c111 YGL209W chemostat     6.508    5.039 1776471_at  TRUE FALSE FALSE
+## c211 YGL209W chemostat     6.741    5.113 1776471_at  TRUE FALSE FALSE
+## c311 YGL209W chemostat     7.087    4.903 1776471_at  TRUE FALSE FALSE
+##      deseq
+## b12   TRUE
+## b22   TRUE
+## b32   TRUE
+## c12   TRUE
+## c22   TRUE
+## c32   TRUE
+## b11   TRUE
+## b21   TRUE
+## b31   TRUE
+## c11   TRUE
+## c21   TRUE
+## c31   TRUE
+## b13  FALSE
+## b23  FALSE
+## b33  FALSE
+## c13  FALSE
+## c23  FALSE
+## c33  FALSE
+## b121 FALSE
+## b221 FALSE
+## b321 FALSE
+## c121 FALSE
+## c221 FALSE
+## c321 FALSE
+## b111 FALSE
+## b211 FALSE
+## b311 FALSE
+## c111 FALSE
+## c211 FALSE
+## c311 FALSE
+```
+
+
+YDR345C: Significant in all
+YDR384C: Significant in all
+YBL025W: not significant in all in all
+YCL042W: Significant in only RNA-seq Edge R computed set.
+YGL209W: Significant in only Microarray computed set.
+
+TODO DISCUSS

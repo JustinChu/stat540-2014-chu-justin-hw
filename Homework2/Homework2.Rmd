@@ -449,6 +449,25 @@ Consult the DEA results from your previous analyses for these genes. For each ge
 
 ```{r}
 jDat <- dget("featGenesData-q3-DPUT.txt")
-jDat$gene.id
+
+ggplot(jDat, aes(x= arrayExp, y = probe.id, colour = cond)) + geom_point()
+ggplot(jDat, aes(x= log.count, y = probe.id, colour = cond)) + geom_point()
+
+jDat$array <- jDat$gene.id %in% arrayDE$gene.id
+jDat$limma <- jDat$gene.id %in% limmaTopGenes$gene.id
+jDat$edger <- jDat$gene.id %in% edgerTopGenes$gene.id
+jDat$deseq <- jDat$gene.id %in% deseqTopGenes$gene.id
+jDat
 ```
+
+YDR345C: Significant in all
+
+YDR384C: Significant in all
+
+YBL025W: not significant in all in all
+
+YCL042W: Significant in only RNA-seq Edge R computed set.
+
+YGL209W: Significant in only Microarray computed set.
+
 TODO DISCUSS
