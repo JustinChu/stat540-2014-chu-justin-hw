@@ -1,13 +1,11 @@
 Homework 02
 ======================================================================
 
-In this assignment you will work with data originally published in "A comprehensive comparison of RNA-Seq-based transcriptome analysis from reads to differential gene expression and cross-comparison with microarrays: a case study in _Saccharomyces cerevisiae_." by Nookaew et al (Nucleic Acids Res. 2012 Nov 1;40(20):10084-97. PMID 22965124). The article is available here: [doi: 10.1093/nar/gks804](http://dx.doi.org/10.1093%2Fnar%2Fgks804).
+In this assignment we worked with data originally published in "A comprehensive comparison of RNA-Seq-based transcriptome analysis from reads to differential gene expression and cross-comparison with microarrays: a case study in _Saccharomyces cerevisiae_." by Nookaew et al (Nucleic Acids Res. 2012 Nov 1;40(20):10084-97. PMID 22965124). The article is available here: [doi: 10.1093/nar/gks804](http://dx.doi.org/10.1093%2Fnar%2Fgks804).
 
 The authors used two different platforms -- microarrays and RNA-Seq -- to obtain gene expression data for yeast grown in two conditions: batch medium and chemostat. They then compared the results of differential expression analysis (DEA) across platforms and under various combinations of aligners and methods for identifying differential expression. We will do the same. Some of the DEA methods covered in this class were included in their analysis, `edgeR` and `DESeq`, while others were not, such as `limma` and, in particular, the `voom` function.
 
 We will work with their data obtained from the NCBI SRA and GEO repositories. Because of some differences in pre-processing your results will differ from theirs.
-
-## Your mission
 
 ## Q1) Microarray Analysis
 
@@ -21,13 +19,6 @@ Start by loading data/libraries:
 
 ```r
 library(ggplot2)
-```
-
-```
-## Warning: package 'ggplot2' was built under R version 3.0.3
-```
-
-```r
 library(lattice)
 library(plyr)
 library(knitr)
@@ -919,97 +910,84 @@ Consult the DEA results from your previous analyses for these genes. For each ge
 
 ```r
 jDat <- dget("featGenesData-q3-DPUT.txt")
+```
+
+```
+## Warning: cannot open file 'featGenesData-q3-DPUT.txt': No such file or
+## directory
+```
+
+```
+## Error: cannot open the connection
+```
+
+```r
 
 ggplot(jDat, aes(x = arrayExp, y = probe.id, colour = cond)) + geom_point()
 ```
 
-![plot of chunk unnamed-chunk-44](figure/unnamed-chunk-441.png) 
+```
+## Error: object 'jDat' not found
+```
 
 ```r
 ggplot(jDat, aes(x = log.count, y = probe.id, colour = cond)) + geom_point()
 ```
 
-![plot of chunk unnamed-chunk-44](figure/unnamed-chunk-442.png) 
+```
+## Error: object 'jDat' not found
+```
 
 ```r
 
 jDat$array <- jDat$gene.id %in% arrayDE$gene.id
+```
+
+```
+## Error: object 'jDat' not found
+```
+
+```r
 jDat$limma <- jDat$gene.id %in% limmaTopGenes$gene.id
+```
+
+```
+## Error: object 'jDat' not found
+```
+
+```r
 jDat$edger <- jDat$gene.id %in% edgerTopGenes$gene.id
+```
+
+```
+## Error: object 'jDat' not found
+```
+
+```r
 jDat$deseq <- jDat$gene.id %in% deseqTopGenes$gene.id
+```
+
+```
+## Error: object 'jDat' not found
+```
+
+```r
 jDat
 ```
 
 ```
-##      gene.id      cond log.count arrayExp   probe.id array limma edger
-## b12  YDR345C     batch    12.588   11.595 1770682_at  TRUE  TRUE  TRUE
-## b22  YDR345C     batch    13.075   11.622 1770682_at  TRUE  TRUE  TRUE
-## b32  YDR345C     batch    12.634   11.809 1770682_at  TRUE  TRUE  TRUE
-## c12  YDR345C chemostat     8.331    7.529 1770682_at  TRUE  TRUE  TRUE
-## c22  YDR345C chemostat     8.430    7.730 1770682_at  TRUE  TRUE  TRUE
-## c32  YDR345C chemostat     8.852    7.763 1770682_at  TRUE  TRUE  TRUE
-## b11  YDR384C     batch     7.459    8.102 1778111_at  TRUE  TRUE  TRUE
-## b21  YDR384C     batch     7.925    8.491 1778111_at  TRUE  TRUE  TRUE
-## b31  YDR384C     batch     7.508    8.489 1778111_at  TRUE  TRUE  TRUE
-## c11  YDR384C chemostat    11.702   12.278 1778111_at  TRUE  TRUE  TRUE
-## c21  YDR384C chemostat    11.883   12.248 1778111_at  TRUE  TRUE  TRUE
-## c31  YDR384C chemostat    12.146   12.235 1778111_at  TRUE  TRUE  TRUE
-## b13  YBL025W     batch     5.426    6.595 1775334_at FALSE FALSE FALSE
-## b23  YBL025W     batch     6.000    6.564 1775334_at FALSE FALSE FALSE
-## b33  YBL025W     batch     5.644    6.702 1775334_at FALSE FALSE FALSE
-## c13  YBL025W chemostat     5.459    6.564 1775334_at FALSE FALSE FALSE
-## c23  YBL025W chemostat     5.044    6.520 1775334_at FALSE FALSE FALSE
-## c33  YBL025W chemostat     5.931    6.366 1775334_at FALSE FALSE FALSE
-## b121 YCL042W     batch     4.755    2.546 1776330_at FALSE FALSE  TRUE
-## b221 YCL042W     batch     4.392    2.543 1776330_at FALSE FALSE  TRUE
-## b321 YCL042W     batch     3.585    2.501 1776330_at FALSE FALSE  TRUE
-## c121 YCL042W chemostat     6.943    2.625 1776330_at FALSE FALSE  TRUE
-## c221 YCL042W chemostat     6.190    2.839 1776330_at FALSE FALSE  TRUE
-## c321 YCL042W chemostat     6.714    2.521 1776330_at FALSE FALSE  TRUE
-## b111 YGL209W     batch     6.919    7.329 1776471_at  TRUE FALSE FALSE
-## b211 YGL209W     batch     7.229    7.395 1776471_at  TRUE FALSE FALSE
-## b311 YGL209W     batch     6.781    7.368 1776471_at  TRUE FALSE FALSE
-## c111 YGL209W chemostat     6.508    5.039 1776471_at  TRUE FALSE FALSE
-## c211 YGL209W chemostat     6.741    5.113 1776471_at  TRUE FALSE FALSE
-## c311 YGL209W chemostat     7.087    4.903 1776471_at  TRUE FALSE FALSE
-##      deseq
-## b12   TRUE
-## b22   TRUE
-## b32   TRUE
-## c12   TRUE
-## c22   TRUE
-## c32   TRUE
-## b11   TRUE
-## b21   TRUE
-## b31   TRUE
-## c11   TRUE
-## c21   TRUE
-## c31   TRUE
-## b13  FALSE
-## b23  FALSE
-## b33  FALSE
-## c13  FALSE
-## c23  FALSE
-## c33  FALSE
-## b121 FALSE
-## b221 FALSE
-## b321 FALSE
-## c121 FALSE
-## c221 FALSE
-## c321 FALSE
-## b111 FALSE
-## b211 FALSE
-## b311 FALSE
-## c111 FALSE
-## c211 FALSE
-## c311 FALSE
+## Error: object 'jDat' not found
 ```
 
 
 YDR345C: Significant in all
+
 YDR384C: Significant in all
+
 YBL025W: not significant in all in all
+
 YCL042W: Significant in only RNA-seq Edge R computed set.
+
 YGL209W: Significant in only Microarray computed set.
 
 TODO DISCUSS

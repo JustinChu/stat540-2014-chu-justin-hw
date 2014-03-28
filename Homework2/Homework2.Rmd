@@ -1,13 +1,11 @@
 Homework 02
 ======================================================================
 
-In this assignment you will work with data originally published in "A comprehensive comparison of RNA-Seq-based transcriptome analysis from reads to differential gene expression and cross-comparison with microarrays: a case study in _Saccharomyces cerevisiae_." by Nookaew et al (Nucleic Acids Res. 2012 Nov 1;40(20):10084-97. PMID 22965124). The article is available here: [doi: 10.1093/nar/gks804](http://dx.doi.org/10.1093%2Fnar%2Fgks804).
+In this assignment we worked with data originally published in "A comprehensive comparison of RNA-Seq-based transcriptome analysis from reads to differential gene expression and cross-comparison with microarrays: a case study in _Saccharomyces cerevisiae_." by Nookaew et al (Nucleic Acids Res. 2012 Nov 1;40(20):10084-97. PMID 22965124). The article is available here: [doi: 10.1093/nar/gks804](http://dx.doi.org/10.1093%2Fnar%2Fgks804).
 
 The authors used two different platforms -- microarrays and RNA-Seq -- to obtain gene expression data for yeast grown in two conditions: batch medium and chemostat. They then compared the results of differential expression analysis (DEA) across platforms and under various combinations of aligners and methods for identifying differential expression. We will do the same. Some of the DEA methods covered in this class were included in their analysis, `edgeR` and `DESeq`, while others were not, such as `limma` and, in particular, the `voom` function.
 
 We will work with their data obtained from the NCBI SRA and GEO repositories. Because of some differences in pre-processing your results will differ from theirs.
-
-## Your mission
 
 ## Q1) Microarray Analysis
 
@@ -426,17 +424,22 @@ Make some observations about the strengths of these two platforms.
 
 Densities of q-values of the genes analyzed by both platforms:
 ```{r}
-bothDat <- intersect(edger.results$gene.id, gseRes$gene.id)
+bothDat <- intersect(edgerTopGenes$gene.id, arrayDE$gene.id)
+arrayDatBoth <- arrayDE[arrayDE$gene.id %in% bothDat,]
+arrayDatBoth$type <- "microarray"
+rnaDatBoth <- edgerTopGenes[edgerTopGenes$gene.id %in% bothDat,]
+rnaDatBoth$type <- "rna-seq"
 
-p <- ggplot(edger.results[edger.results$gene.id %in% bothDat,], aes(x=q.value)) + geom_density(fill="blue", alpha =0.5)
-p <- p + geom_density(data = gseRes[gseRes$gene.id %in% bothDat,], fill="red", alpha =0.5) 
+intersectDat <- merge(rnaDatBoth,arrayDatBoth, all = TRUE)
+
+p <- ggplot(arrayDatBoth, aes(x=q.value, colour = type, fill = type)) + geom_density(alpha =0.5) + scale_x_log10()
 p
 ```
 TODO: COMMENT AND ADD LEGEND FOR WHAT EACH COLOUR MEANS
 
 Densities of q-values of ALL genes analyzed by at least one of the platforms:
 ```{r}
-allDat <- union(edger.results$gene.id, gseRes$gene.id)
+allDat <- union(edger.results$gene.id, arrayDE$gene.id)
 
 p <- ggplot(edger.results[edger.results$gene.id %in% allDat,], aes(x=q.value)) + geom_density(fill="blue", alpha =0.5)
 p <- p + geom_density(data = gseRes[gseRes$gene.id %in% allDat,], fill="red", alpha =0.5) 
