@@ -1,5 +1,6 @@
 Homework 02
 ======================================================================
+Justin Chu
 
 In this assignment we worked with data originally published in "A comprehensive comparison of RNA-Seq-based transcriptome analysis from reads to differential gene expression and cross-comparison with microarrays: a case study in _Saccharomyces cerevisiae_." by Nookaew et al (Nucleic Acids Res. 2012 Nov 1;40(20):10084-97. PMID 22965124). The article is available here: [doi: 10.1093/nar/gks804](http://dx.doi.org/10.1093%2Fnar%2Fgks804).
 
@@ -13,8 +14,8 @@ The six samples in this study, 3 replicates for each of the two conditions, were
 
 ### a) (1pt) Load Microarray Data
 
-Start by loading libraries (hidden):
-```{r echo=FALSE}
+Start by loading libraries (hidden)
+```{r include=FALSE, echo=FALSE}
 suppressWarnings(library(ggplot2))
 suppressWarnings(library(gplots))
 suppressWarnings(library(DESeq))
@@ -26,6 +27,7 @@ library(hexbin)
 library(preprocessCore)
 library(limma)
 library(yeast2.db)
+suppressWarnings(library(gridExtra))
 ```
 
 Load the normalized data:
@@ -54,7 +56,7 @@ i. (High volume) scatter plot matrix.
 ```{r}
 splom(gseDat, panel=panel.hexbinplot)
 ```
-This plot suggests that c2 is swapped with b1 based on the correlation observed.
+This plot suggests that c2 is swapped with b1 based on the correlation (or lack there of) observed.
 
 ii. A heatmap of the first 100 genes:
 ```{r}
@@ -259,6 +261,8 @@ fit <- glmFit(dge.glm.tag.disp, design)
 lrt <- glmLRT(fit, coef = 2)
 tt.glm <- topTags(lrt, n = Inf)$table
 edger.results <- data.frame(gene.id = rownames(tt.glm), p.value = tt.glm$PValue, q.value = tt.glm$FDR, log.fc = tt.glm$logFC, test.stat = tt.glm$LR )
+str(edger.results)
+head(edger.results)
 ```
 
 Save your results for later with `write.table()` in file called `stampy.edger.results.tsv`.
@@ -304,6 +308,8 @@ deSeqResults <- nbinomTest(deSeqDat, levels(group)[1], levels(group)[2])
 #reorder by pvalue
 deSeqResults <- deSeqResults[with(deSeqResults, order(pval)), ]
 deseq.results <- data.frame(gene.id = deSeqResults$id, p.value = deSeqResults$pval, q.value = deSeqResults$padj, log.fc = deSeqResults$log2FoldChange)
+str(deseq.results)
+head(deseq.results)
 ```
 
 Save your results for later with `write.table()` in file called `stampy.deseq.results.tsv`.
@@ -345,7 +351,9 @@ dat.voomed <- voom(countDat, design, plot = TRUE, lib.size = colSums(countDat) *
 fit <- lmFit(dat.voomed, design)
 fit <- eBayes(fit)
 voomTTbl <- topTable(fit, n = Inf, coef = c("group2"))
-limma.results <- data.frame(gene.id = rownames(voomTTbl), p.value = voomTTbl$P.Value, q.value = voomTTbl$adj.P.Val, log.fc = voomTTbl$logFC, test.stat <- voomTTbl$t)
+limma.results <- data.frame(gene.id = rownames(voomTTbl), p.value = voomTTbl$P.Value, q.value = voomTTbl$adj.P.Val, log.fc = voomTTbl$logFC, test.stat = voomTTbl$t)
+str(limma.results)
+head(limma.results)
 ```
 
 Save your results for later with `write.table()` in file called `stampy.limma.results.tsv`.
@@ -387,7 +395,7 @@ These values seem to be consitant from my previous results (2c-iv, and 2d-iv):
 * edgeR: 384 + 1792 + 2 + 491 = 2669
 * voom+limma: 1792 + 2 = 1794
 * DESeq and edgeR: 1792 + 384 = 2176
-* voom+limma edgeR and DESeq: 1792 / 1794 = 0.9989
+* fraction of genes in voom+limma also in edgeR and DESeq: 1792 / 1794 = 0.9989
 
 ii) Using the function `plotSmear` function from `edgeR`, you can look at a scatterplot of observed differential expression (y-axis) against overall abundance (x-axis), both axes logarithmically transformed -- to check that putative DE genes seem plausible. Create a smear plot. Within this plot, identify the set of genes which are differentially expressed at an FDR of 1e-5 using all three methods (i.e., the q-values estimated by `edgeR`, `DESeq`, and `voom` are below 1e-5). Explain how you interpret this plot. Do you see reasonable results?
 
@@ -398,16 +406,33 @@ Points that are black are not siginifcantly differntially expressed, and points 
 
 For the most part the results seem resonable. There are are a few points (presumbably from DESeq and voom) that are not labeled diffentially expressed (still black) despite being outside of the region of of signiicant (red) results. This too, however is to be expected as the methods compute q-values slightly differntly from eachother.
 
-iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESeq`. Illustrate the logged counts of them. Compare the (log) counts of these two genes with those of two genes identified by the three methods (see example below)
+iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESeq`. Illustrate the logged counts of them. Compare the (log) counts of these two genes with those of two genes identified by the three methods.
 
+Example for two genes found by all methods:
 ```{r}
-missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, topGenes$gene.id), deseqTopGenes$gene.id)
+featureMe <- c("YDR384C", "YDR345C")
+(featureCounts <- countDat[featureMe, ])
+featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
+    cond = factor(rep(gseDes$type, each = nrow(featureCounts))), log.count = log2(unlist(featureCounts)))
+stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitter = TRUE)
+```
+
+Two genes found by only edgeR and voom+limma
+```{r}
+missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, edgerTopGenes$gene.id), deseqTopGenes$gene.id)
 (featureCounts <- countDat[missingGenes, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
     cond = factor(rep(gseDes$type, each = nrow(featureCounts))), log.count = log2(unlist(featureCounts)))
 stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitter = TRUE)
 ```
-TODO: DISCUSS!!
+Is there does not seem to be an obvious pattern in these 2 genes that makes edgeR and Voom pick them but not DESeq.
+These hits are definatly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
+
+DESeq results for 2 genes:
+```{r}
+subset(deseq.results, gene.id == missingGenes)
+```
+The results have a fairly low FPR/q-value (near our threshold of 1e-5) so it seems that they were right on the cusp of being called significant by DEseq. It seems to me that these genes missing from DEseq is just an illustration of how the methods differ slightly.
 
 ## Q3) Compare DEA results between RNA-Seq and array
 
@@ -507,26 +532,26 @@ Consult the DEA results from your previous analyses for these genes. For each ge
 ```{r}
 jDat <- dget("featGenesData-q3-DPUT.txt")
 
-ggplot(jDat, aes(x= arrayExp, y = probe.id, colour = cond)) + geom_point()
-ggplot(jDat, aes(x= log.count, y = probe.id, colour = cond)) + geom_point()
+#replot in ggplot2
+arrayExpPlot <- ggplot(jDat, aes(x= arrayExp, y = gene.id, colour = cond)) + geom_point() + theme(legend.position="none")
+logCountPlot <- ggplot(jDat, aes(x= log.count, y = gene.id, colour = cond)) + geom_point() + theme( axis.text.y = element_blank(), axis.title.y=element_blank(), axis.ticks.y = element_blank())
 
-compareDat <- data.frame(gene.id = unique(jDat$gene.id))
+grid.arrange(arrayExpPlot, logCountPlot, ncol=2)
+```
 
-compareDat$array <- compareDat$gene.id %in% arrayTopGenes$gene.id
+Summarize 5 genes for each method in a table:
+```{r, results = 'asis'}
+compareDat <- data.frame(gene.id = sort(unique(jDat$gene.id), decreasing=TRUE))
+compareDat$microarray <- compareDat$gene.id %in% arrayTopGenes$gene.id
 compareDat$limma <- compareDat$gene.id %in% limmaTopGenes$gene.id
 compareDat$edger <- compareDat$gene.id %in% edgerTopGenes$gene.id
 compareDat$deseq <- compareDat$gene.id %in% deseqTopGenes$gene.id
 kable(compareDat, format = "markdown")
 ```
 
-YDR345C: Significant in all
-
-YDR384C: Significant in all
-
-YBL025W: not significant in all in all
-
-YCL042W: Significant in only RNA-seq Edge R computed set.
-
-YGL209W: Significant in only Microarray computed set.
-
-TODO DISCUSS
+Summary of table and discussion:
+* YGL209W: Significant in only Microarray computed set. This is reflected in the plots, you can see arrayExp has a clear division where in the log.counts all the points are together (though it looks like on average the batch might be slightly higher).
+* YCL042W: Significant in only RNA-seq Edge R computed set. In the plots, you can see log.count has a clear division where in the arrayExp all the points are together. It is not clear why the other two method did not pick it up, but it might have something to do with the difference in expression not be that large.
+* YBL025W: Not significant in all in all. Reflect in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
+* YDR384C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
+* YDR345C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
