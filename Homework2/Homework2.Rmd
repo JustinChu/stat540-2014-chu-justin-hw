@@ -402,7 +402,7 @@ ii) Using the function `plotSmear` function from `edgeR`, you can look at a scat
 ```{r}
 plotSmear(dge.glm, de.tags = sharedGenes3)
 ```
-Points that are black are not siginifcantly differntially expressed, and points in red are differntially expressed by all methods. You can see almost a clear phase seperation of the black and red points reflecting our p-value cut off.
+Points that are black are not significant differntially expressed, and points in red are differntially expressed by all methods. You can see almost a clear phase seperation of the black and red points reflecting our p-value cut off.
 
 For the most part the results seem resonable. There are are a few points (presumbably from DESeq and voom) that are not labeled diffentially expressed (still black) despite being outside of the region of of signiicant (red) results. This too, however is to be expected as the methods compute q-values slightly differntly from eachother.
 
@@ -410,7 +410,6 @@ iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESe
 
 Example for two genes found by all methods:
 ```{r}
-<<<<<<< HEAD
 featureMe <- c("YDR384C", "YDR345C")
 (featureCounts <- countDat[featureMe, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
@@ -420,8 +419,6 @@ stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitte
 
 Two genes found by only edgeR and voom+limma
 ```{r}
-=======
->>>>>>> d721ead1bdb0ae20cfb9485eadc72d81fee37261
 missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, edgerTopGenes$gene.id), deseqTopGenes$gene.id)
 (featureCounts <- countDat[missingGenes, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
@@ -429,7 +426,7 @@ featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(feat
 stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitter = TRUE)
 ```
 Is there does not seem to be an obvious pattern in these 2 genes that makes edgeR and Voom pick them but not DESeq.
-These hits are definatly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
+These hits are definetly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
 
 DESeq results for 2 genes:
 ```{r}
@@ -490,7 +487,7 @@ intersectDat$q.value <- intersectDat$q.value + .Machine$double.xmin
 p <- ggplot(intersectDat, aes(x=q.value, colour = type, fill = type)) + geom_density(alpha =0.5) + scale_x_log10()
 p
 ```
-Basically this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than siginicant RNA-seq values.
+Basically this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than significant RNA-seq values.
 
 ###Densities of q-values of ALL genes analyzed by at least one of the platforms and make some observations about the strengths of these two platforms:
 
@@ -526,7 +523,7 @@ unionDat$q.value <- unionDat$q.value + .Machine$double.xmin
 p <- ggplot(unionDat, aes(x=q.value, colour = type, fill = type)) + geom_density(alpha =0.5) + scale_x_log10()
 p
 ```
-Again, this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than siginicant RNA-seq values.
+Again, this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than significant RNA-seq values.
 
 iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it.
 
@@ -555,6 +552,5 @@ kable(compareDat, format = "markdown")
 Summary of table and discussion:
 * YGL209W: Significant in only Microarray computed set. This is reflected in the plots, you can see arrayExp has a clear division where in the log.counts all the points are together (though it looks like on average the batch might be slightly higher).
 * YCL042W: Significant in only RNA-seq Edge R computed set. In the plots, you can see log.count has a clear division where in the arrayExp all the points are together. It is not clear why the other two method did not pick it up, but it might have something to do with the difference in expression not be that large.
-* YBL025W: Not significant in all in all. Reflect in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
-* YDR384C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
-* YDR345C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
+* YBL025W: Not significant in all in all. Reflected in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
+* YDR384C: Significant in all. Nothing too interesting, there is clear differential expression in both sets in the plots.
