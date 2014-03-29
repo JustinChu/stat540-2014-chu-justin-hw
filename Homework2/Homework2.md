@@ -67,7 +67,7 @@ head(gseDat)
 ## 1769313_at  7.815 6.600 6.534  7.770 6.564  7.852
 ```
 
-I am interpreting the columns names as samples and rows names as probes. The intersections are some measure of expression based on hybridization on the microarray. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
+I am interpreting the columns names as samples and rows names as probes. The intersetions are some measure of expression based on hybridization on the microarray. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
 
 ### b) (2pt) Identify Sample Swap
 
@@ -898,7 +898,7 @@ p
 ![plot of chunk unnamed-chunk-45](figure/unnamed-chunk-45.png) 
 
 
-Basically we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probability is concentrated at lower q-values. It seems to be able to call genes with higher confidence. This is likely due to limitations in microarray technology like lower dynamic range with respect to RNA-seq.
+Basically we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. It seems to be able to call genes with higher confidence. This is likely due to limitations in microarray technology like lower dynamic range with respect to RNA-seq.
 
 For only significant gene by both platforms:
 
@@ -943,7 +943,7 @@ p
 ![plot of chunk unnamed-chunk-47](figure/unnamed-chunk-47.png) 
 
 
-Again, we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. The only difference it that the effect seems much more pronounced, likely because RNA-seq is not dependent on what is hybridized to probes as it is in microarrays.
+Again, we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. The only difference it that the effect seems much more pronouced, likely because RNA-seq is not dependant on what is hybridized to probes as it is in microarrays.
 
 For only significant gene by both platforms:
 
@@ -1010,7 +1010,7 @@ kable(compareDat, format = "markdown")
 
 
 Summary of table and discussion:
-* YGL209W: Significant in only Microarray computed set. This is reflected in the plots, you can see arrayExp has a clear division where in the log.counts all the points are together (though it looks like on average the batch might be slightly higher).
+* YGL209W: Significant in only Microarray computed set. This is reflectedd in the plots, you can see arrayExp has a clear division where in the log.counts all the points are together (though it looks like on average the batch might be slightly higher).
 * YCL042W: Significant in only RNA-seq Edge R computed set. In the plots, you can see log.count has a clear division where in the arrayExp all the points are together. It is not clear why the other two method did not pick it up, but it might have something to do with the difference in expression not be that large.
 * YBL025W: Not significant in all in all. Reflected in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
 * YDR384C: Significant in all. Nothing too interesting, there is clear differential expression in both sets in the plots.
