@@ -5,4 +5,5 @@ The purpose of this repository is for submitting Stat 540 homework.
 Homework 1 is located in /Homework1
 It should already be knitted and accessable from the Homework1.html file located within.
 
-Homework 2 is pending
+Homework 2 is located in /Homework2
+It should already be knitted and accessable from the Homework2.html file located within.
