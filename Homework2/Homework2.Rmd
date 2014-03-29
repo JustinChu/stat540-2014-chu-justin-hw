@@ -401,7 +401,7 @@ For the most part the results seem resonable. There are are a few points (presum
 iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESeq`. Illustrate the logged counts of them. Compare the (log) counts of these two genes with those of two genes identified by the three methods (see example below)
 
 ```{r}
-missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, topGenes$gene.id), deseqTopGenes$gene.id)
+missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, edgerTopGenes$gene.id), deseqTopGenes$gene.id)
 (featureCounts <- countDat[missingGenes, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
     cond = factor(rep(gseDes$type, each = nrow(featureCounts))), log.count = log2(unlist(featureCounts)))
