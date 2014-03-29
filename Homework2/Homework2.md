@@ -837,8 +837,7 @@ stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitte
 
 ![plot of chunk unnamed-chunk-42](figure/unnamed-chunk-42.png) 
 
-Is there does not seem to be an obvious pattern in these 2 genes that makes edgeR and Voom pick them but not DESeq.
-These hits are definetly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
+There does not seem to be an obvious pattern in these 2 genes that makes edgeR and Voom pick them but not DESeq. However there are a few things I can note. These hits are definetly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows differential expression. YMR058W seems to have a larger variance but overall in the groups also.
 
 DESeq results for 2 genes:
 
