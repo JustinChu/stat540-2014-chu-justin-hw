@@ -410,6 +410,7 @@ iii) There are two genes identified by `edgeR` and `voom+limma` but not by `DESe
 
 Example for two genes found by all methods:
 ```{r}
+<<<<<<< HEAD
 featureMe <- c("YDR384C", "YDR345C")
 (featureCounts <- countDat[featureMe, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 
@@ -419,6 +420,8 @@ stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitte
 
 Two genes found by only edgeR and voom+limma
 ```{r}
+=======
+>>>>>>> d721ead1bdb0ae20cfb9485eadc72d81fee37261
 missingGenes <- setdiff(intersect(limmaTopGenes$gene.id, edgerTopGenes$gene.id), deseqTopGenes$gene.id)
 (featureCounts <- countDat[missingGenes, ])
 featureDat <- data.frame(gene.id = factor(rep(rownames(featureCounts), ncol(featureCounts))), 

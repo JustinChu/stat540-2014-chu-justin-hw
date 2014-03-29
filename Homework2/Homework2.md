@@ -67,7 +67,7 @@ head(gseDat)
 ## 1769313_at  7.815 6.600 6.534  7.770 6.564  7.852
 ```
 
-I am interpreting the columns names as samples and rows names as probes. The intersetions are some measure of expression based on hybridization on the microarray. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
+I am interpreting the columns names as samples and rows names as probes. The intersections are some measure of expression based on hybridization on the microarray. Column names (ie. samples) with the same prefix (b for batch medium and c for chemostat) have the same conditions.
 
 ### b) (2pt) Identify Sample Swap
 
@@ -787,7 +787,7 @@ plotSmear(dge.glm, de.tags = sharedGenes3)
 
 ![plot of chunk unnamed-chunk-40](figure/unnamed-chunk-40.png) 
 
-Points that are black are not siginifcantly differntially expressed, and points in red are differntially expressed by all methods. You can see almost a clear phase seperation of the black and red points reflecting our p-value cut off.
+Points that are black are not significant differntially expressed, and points in red are differntially expressed by all methods. You can see almost a clear phase seperation of the black and red points reflecting our p-value cut off.
 
 For the most part the results seem resonable. There are are a few points (presumbably from DESeq and voom) that are not labeled diffentially expressed (still black) despite being outside of the region of of signiicant (red) results. This too, however is to be expected as the methods compute q-values slightly differntly from eachother.
 
@@ -838,7 +838,7 @@ stripplot(gene.id ~ log.count, featureDat, groups = cond, auto.key = TRUE, jitte
 ![plot of chunk unnamed-chunk-42](figure/unnamed-chunk-42.png) 
 
 Is there does not seem to be an obvious pattern in these 2 genes that makes edgeR and Voom pick them but not DESeq.
-These hits are definatly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
+These hits are definetly not be as convincing as the other two examples. They both (YPL271W especially) seem to be less different (the difference between  two expression patterns are not as large) but it still shows diffential expression. YMR058W seems to have a larger variance but overall in the groups also.
 
 DESeq results for 2 genes:
 
@@ -898,7 +898,7 @@ p
 ![plot of chunk unnamed-chunk-45](figure/unnamed-chunk-45.png) 
 
 
-Basically we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. It seems to be able to call genes with higher confidence. This is likely due to limitations in microarray technology like lower dynamic range with respect to RNA-seq.
+Basically we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probability is concentrated at lower q-values. It seems to be able to call genes with higher confidence. This is likely due to limitations in microarray technology like lower dynamic range with respect to RNA-seq.
 
 For only significant gene by both platforms:
 
@@ -921,7 +921,7 @@ p
 
 ![plot of chunk unnamed-chunk-46](figure/unnamed-chunk-46.png) 
 
-Basically this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than siginicant RNA-seq values.
+Basically this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than significant RNA-seq values.
 
 ###Densities of q-values of ALL genes analyzed by at least one of the platforms and make some observations about the strengths of these two platforms:
 
@@ -943,7 +943,7 @@ p
 ![plot of chunk unnamed-chunk-47](figure/unnamed-chunk-47.png) 
 
 
-Again, we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. The only difference it that the effect seems much more pronouced, likely because RNA-seq is not dependant on what is hybridized to probes as it is in microarrays.
+Again, we can see rna-seq seem to generate a similar density distribution, except near 0 (where it matters). More area seems to be concentrated near zero in RNA-seq and thus a higher probablity is concentrated at lower q-values. The only difference it that the effect seems much more pronounced, likely because RNA-seq is not dependent on what is hybridized to probes as it is in microarrays.
 
 For only significant gene by both platforms:
 
@@ -966,7 +966,7 @@ p
 
 ![plot of chunk unnamed-chunk-48](figure/unnamed-chunk-48.png) 
 
-Again, this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than siginicant RNA-seq values.
+Again, this shows that compared to RNA-seq, that most signicant micro array q-values are generally larger than significant RNA-seq values.
 
 iii) We provide a data set with array expression and count data for 5 interesting genes; below is also code to load it and a figure depicting it.
 
@@ -1012,6 +1012,6 @@ kable(compareDat, format = "markdown")
 Summary of table and discussion:
 * YGL209W: Significant in only Microarray computed set. This is reflected in the plots, you can see arrayExp has a clear division where in the log.counts all the points are together (though it looks like on average the batch might be slightly higher).
 * YCL042W: Significant in only RNA-seq Edge R computed set. In the plots, you can see log.count has a clear division where in the arrayExp all the points are together. It is not clear why the other two method did not pick it up, but it might have something to do with the difference in expression not be that large.
-* YBL025W: Not significant in all in all. Reflect in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
-* YDR384C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
-* YDR345C: Significant in all. Nothing too interesting, there is clear diffential expression in both sets in the plots.
+* YBL025W: Not significant in all in all. Reflected in the plots, all the samples for each condition on both RNA-seq and microarray data have similar values, and the points seem to be grouped together.
+* YDR384C: Significant in all. Nothing too interesting, there is clear differential expression in both sets in the plots.
+* YDR345C: Significant in all. Nothing too interesting, there is clear differential expression in both sets in the plots.
